@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -149,9 +149,9 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   }
 
   return (
-    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 overflow-hidden">
+    <div className="flex h-full">
       {/* Chat Column */}
-      <div className="md:col-span-2 flex flex-col h-full">
+      <div className="flex flex-1 flex-col">
         <div className="flex-1 overflow-y-auto">
           <ScrollArea className="h-full p-4 md:p-6">
             <div className="max-w-4xl mx-auto space-y-6">
@@ -251,7 +251,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
         </div>
       </div>
       {/* Articles Column */}
-      <div className="hidden md:flex flex-col border-l bg-muted/20 p-4">
+      <div className="hidden md:flex w-[320px] flex-col border-l bg-muted/20 p-4">
         <ScrollArea className="flex-1">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold font-headline mb-4">Latest Articles</h3>

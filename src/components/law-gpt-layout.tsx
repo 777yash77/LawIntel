@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import LawGptClient from '@/components/law-gpt-client';
 import Header from '@/components/header';
 import {
@@ -79,12 +79,14 @@ export default function LawGptPage({ activeChatId: activeChatIdFromProps }: LawG
               </SidebarMenu>
             </SidebarContent>
           </Sidebar>
-          <main className="flex-1 flex flex-col overflow-hidden">
+          <main className="flex-1 flex flex-col">
             <div className="flex items-center gap-2 border-b p-2 shrink-0">
               <SidebarTrigger />
               <h2 className="text-lg font-semibold">LawBot</h2>
             </div>
-            <LawGptClient activeChatId={activeChatId} setActiveChatId={setActiveChatId} />
+            <div className="flex-1 overflow-y-auto">
+              <LawGptClient activeChatId={activeChatId} setActiveChatId={setActiveChatId} />
+            </div>
           </main>
         </div>
       </div>
