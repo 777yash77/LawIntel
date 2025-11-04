@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, use } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -55,8 +55,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [isResponding, setIsResponding] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -156,7 +155,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 overflow-hidden">
       {/* Chat Column */}
       <div className="lg:col-span-2 flex flex-col overflow-hidden">
-        <ScrollArea className="flex-1 p-4 md:p-6" ref={scrollAreaRef}>
+        <ScrollArea className="flex-1 p-4 md:p-6">
           <div className="max-w-4xl mx-auto space-y-6">
             {chatHistory.length === 0 ? (
                <div className="text-center py-16">
