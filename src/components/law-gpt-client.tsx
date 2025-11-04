@@ -7,7 +7,7 @@ import * as z from 'zod';
 import {
   getLegalInformation,
   type LegalQuestionOutput,
-} from '@/ai/flows/legal-qa';
+} from '@/ai/flows/article-definition-and-history';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -162,7 +162,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   }
 
   return (
-    <div className="flex h-full w-full">
+    <div className="flex flex-col h-full w-full">
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full">
         {/* Chat Column */}
