@@ -152,9 +152,9 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   }
 
   return (
-    <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 overflow-hidden">
+    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 overflow-hidden">
       {/* Chat Column */}
-      <div className="lg:col-span-2 flex flex-col overflow-hidden">
+      <div className="md:col-span-2 flex flex-col overflow-hidden">
         <ScrollArea className="flex-1 p-4 md:p-6">
           <div className="max-w-4xl mx-auto space-y-6">
             {chatHistory.length === 0 ? (
@@ -252,7 +252,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
         </div>
       </div>
       {/* Articles Column */}
-      <div className="hidden lg:flex flex-col border-l bg-muted/20 p-4">
+      <div className="hidden md:flex flex-col border-l bg-muted/20 p-4">
         <ScrollArea className="flex-1">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold font-headline mb-4">Latest Articles</h3>
@@ -283,3 +283,5 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     </div>
   );
 }
+
+    
