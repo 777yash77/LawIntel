@@ -25,6 +25,9 @@ import { Loader2, Scale, Send } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { articles } from '@/lib/placeholder-data';
+import Image from 'next/image';
 
 const formSchema = z.object({
   articleName: z.string().min(2, {
@@ -85,6 +88,11 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     }
 
     setIsResponding(true);
+    // When starting a new chat from a view with an old chat, clear the old messages.
+    if (!activeChatId) {
+      setChatHistory([]);
+    }
+
     setChatHistory((prev) => [
       ...prev,
       { isUser: true, text: values.articleName },
@@ -103,6 +111,8 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
         userMessage: values.articleName,
         geminiResponse: result,
       };
+      
+      let newChatId = activeChatId;
 
       if (activeChatId) {
         const docRef = doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
@@ -111,6 +121,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
         const colRef = collection(firestore, 'users', user.uid, 'chat_history');
         const newDoc = await addDocumentNonBlocking(colRef, chatEntry);
         if(newDoc) {
+            newChatId = newDoc.id;
             setActiveChatId(newDoc.id);
             router.push(`/law-gpt/${newDoc.id}`);
         }
@@ -142,101 +153,133 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <ScrollArea className="flex-1 p-4 md:p-6" ref={scrollAreaRef}>
-        <div className="max-w-4xl mx-auto space-y-6">
-          {chatHistory.length === 0 ? (
-             <div className="text-center py-16">
-              <Scale className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h2 className="mt-4 text-2xl font-semibold font-headline">LawBot</h2>
-              <p className="mt-2 text-muted-foreground">
-                Ask about any legal article to get its definition and history.
-              </p>
-             </div>
-          ) : (
-            chatHistory.map((message, index) => (
-              <div
-                key={index}
-                className={`flex items-start gap-4 ${message.isUser ? 'justify-end' : ''}`}
-              >
-                {!message.isUser && (
-                  <Avatar>
-                    <AvatarFallback><Scale /></AvatarFallback>
-                  </Avatar>
-                )}
+    <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 overflow-hidden">
+      {/* Chat Column */}
+      <div className="lg:col-span-2 flex flex-col overflow-hidden">
+        <ScrollArea className="flex-1 p-4 md:p-6" ref={scrollAreaRef}>
+          <div className="max-w-4xl mx-auto space-y-6">
+            {chatHistory.length === 0 ? (
+               <div className="text-center py-16">
+                <Scale className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h2 className="mt-4 text-2xl font-semibold font-headline">LawBot</h2>
+                <p className="mt-2 text-muted-foreground">
+                  Ask about any legal article to get its definition and history.
+                </p>
+               </div>
+            ) : (
+              chatHistory.map((message, index) => (
                 <div
-                  className={`max-w-3xl w-full rounded-lg px-4 py-3 shadow-sm ${
-                    message.isUser
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-card border'
-                  }`}
+                  key={index}
+                  className={`flex items-start gap-4 ${message.isUser ? 'justify-end' : ''}`}
                 >
-                  {message.isLoading ? (
-                    <div className="flex items-center space-x-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Thinking...</span>
-                    </div>
-                  ) : message.data ? (
-                    <div className="space-y-6 prose prose-sm max-w-none">
-                        <div>
-                            <h3 className="font-bold font-headline text-lg mb-2">Definition</h3>
-                            <p>{message.data.definition}</p>
-                        </div>
-                        <Separator />
-                        <div>
-                            <h3 className="font-bold font-headline text-lg mb-2">History</h3>
-                            <p>{message.data.history}</p>
-                        </div>
-                        <Separator />
-                         <div>
-                            <h3 className="font-bold font-headline text-lg mb-2">Past Cases</h3>
-                            <ul className="list-disc pl-5 space-y-2">
-                               {message.data.pastCases.map((c, i) => <li key={i}>{c}</li>)}
-                            </ul>
-                        </div>
-                    </div>
-                  ) : (
-                    <p>{message.text}</p>
+                  {!message.isUser && (
+                    <Avatar>
+                      <AvatarFallback><Scale /></AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div
+                    className={`max-w-3xl w-full rounded-lg px-4 py-3 shadow-sm ${
+                      message.isUser
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-card border'
+                    }`}
+                  >
+                    {message.isLoading ? (
+                      <div className="flex items-center space-x-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Thinking...</span>
+                      </div>
+                    ) : message.data ? (
+                      <div className="space-y-6 prose prose-sm max-w-none">
+                          <div>
+                              <h3 className="font-bold font-headline text-lg mb-2">Definition</h3>
+                              <p>{message.data.definition}</p>
+                          </div>
+                          <Separator />
+                          <div>
+                              <h3 className="font-bold font-headline text-lg mb-2">History</h3>
+                              <p>{message.data.history}</p>
+                          </div>
+                          <Separator />
+                           <div>
+                              <h3 className="font-bold font-headline text-lg mb-2">Past Cases</h3>
+                              <ul className="list-disc pl-5 space-y-2">
+                                 {message.data.pastCases.map((c, i) => <li key={i}>{c}</li>)}
+                              </ul>
+                          </div>
+                      </div>
+                    ) : (
+                      <p>{message.text}</p>
+                    )}
+                  </div>
+                   {message.isUser && user && (
+                    <Avatar>
+                      <AvatarFallback>{user.isAnonymous ? 'A' : user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
                   )}
                 </div>
-                 {message.isUser && user && (
-                  <Avatar>
-                    <AvatarFallback>{user.isAnonymous ? 'A' : user.email?.charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                )}
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
+        </ScrollArea>
+        <div className="border-t bg-background/80">
+          <div className="max-w-4xl mx-auto p-4">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-4">
+                <FormField
+                  control={form.control}
+                  name="articleName"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., 'Article 370 of the Constitution of India'"
+                          {...field}
+                          disabled={isResponding}
+                          autoComplete="off"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" disabled={isResponding} size="icon">
+                  <Send className="h-4 w-4" />
+                  <span className="sr-only">Send</span>
+                </Button>
+              </form>
+            </Form>
+          </div>
         </div>
-      </ScrollArea>
-      <div className="border-t bg-background/80">
-        <div className="max-w-4xl mx-auto p-4">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-4">
-              <FormField
-                control={form.control}
-                name="articleName"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., 'Article 370 of the Constitution of India'"
-                        {...field}
-                        disabled={isResponding}
-                        autoComplete="off"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={isResponding} size="icon">
-                <Send className="h-4 w-4" />
-                <span className="sr-only">Send</span>
-              </Button>
-            </form>
-          </Form>
-        </div>
+      </div>
+      {/* Articles Column */}
+      <div className="hidden lg:flex flex-col border-l bg-muted/20 p-4">
+        <ScrollArea className="flex-1">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold font-headline mb-4">Latest Articles</h3>
+            {articles.map((article, index) => (
+              <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
+                <CardHeader className="p-4">
+                   {article.image && (
+                        <div className="mb-2 rounded-t-lg overflow-hidden aspect-video relative">
+                          <Image
+                            src={article.image.imageUrl}
+                            alt={article.image.description}
+                            fill
+                            className="object-cover"
+                            data-ai-hint={article.image.imageHint}
+                          />
+                        </div>
+                      )}
+                  <CardTitle className="font-headline text-base">{article.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <p className="text-xs text-muted-foreground">{article.summary}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );
