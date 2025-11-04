@@ -79,6 +79,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
         { isUser: false, data: activeChat.geminiResponse },
       ]);
     } else {
+      // When there is no active chat (new chat), clear the history
       setChatHistory([]);
     }
   }, [activeChat]);
@@ -91,21 +92,17 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   
     const userMessage = values.articleName;
     form.reset();
-    setIsResponding(true);
-  
-    // Optimistically update the UI
-    const newChatHistory: ChatMessage[] = [
-      { isUser: true, text: userMessage },
-      { isUser: false, isLoading: true },
-    ];
   
     // If it's a new chat, clear the view first
     if (!activeChatId) {
-      setChatHistory(newChatHistory);
-    } else {
-      // For existing chats, we still show the new interaction immediately
-      setChatHistory(newChatHistory);
+      setChatHistory([]);
     }
+
+    setIsResponding(true);
+    setChatHistory([
+      { isUser: true, text: userMessage },
+      { isUser: false, isLoading: true },
+    ]);
   
     try {
       const result = await getArticleDefinitionAndHistory({
@@ -120,34 +117,17 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
       };
       
       if (activeChatId) {
-        // Update existing document
         const docRef = doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
-        await setDocumentNonBlocking(docRef, chatEntry, { merge: true });
         // The useDoc hook will handle updating the UI from Firestore data
+        await setDocumentNonBlocking(docRef, chatEntry, { merge: true });
+        // The local state is now managed by the useDoc hook, so we don't set it manually
       } else {
-        // Create new document
         const colRef = collection(firestore, 'users', user.uid, 'chat_history');
         const newDoc = await addDocumentNonBlocking(colRef, chatEntry);
         if (newDoc) {
-          // Navigate to the new chat URL, which will trigger the layout to re-render
-          // with the correct active chat.
           router.push(`/law-gpt/${newDoc.id}`);
         }
       }
-  
-      // Update the final message state now that we have the result
-      // This is handled by the useDoc hook for existing chats, but we need to do it manually for new ones
-       if (!activeChatId) {
-         setChatHistory((prev) => {
-           const newHistory = [...prev];
-           const lastMessage = newHistory[newHistory.length - 1];
-           if (lastMessage && !lastMessage.isUser && lastMessage.isLoading) {
-             lastMessage.isLoading = false;
-             lastMessage.data = result;
-           }
-           return newHistory;
-         });
-       }
   
     } catch (error) {
       console.error(error);
@@ -171,7 +151,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
       <div className="flex flex-col h-full">
          <ScrollArea className="flex-1" ref={scrollAreaRef}>
             <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
-              {chatHistory.length === 0 ? (
+              {chatHistory.length === 0 && !isResponding ? (
                   <div className="text-center py-16">
                   <Scale className="mx-auto h-12 w-12 text-muted-foreground" />
                   <h2 className="mt-4 text-2xl font-semibold font-headline">LawBot</h2>
@@ -297,5 +277,3 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     </div>
   );
 }
-
-    
