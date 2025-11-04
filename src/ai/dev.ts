@@ -1,4 +1,4 @@
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/article-definition-and-history.ts';
+import '@/ai/flows/legal-qa.ts';

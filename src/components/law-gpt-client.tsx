@@ -5,9 +5,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
-  getArticleDefinitionAndHistory,
-  type ArticleDefinitionAndHistoryOutput,
-} from '@/ai/flows/article-definition-and-history';
+  getLegalInformation,
+  type LegalQuestionOutput,
+} from '@/ai/flows/legal-qa';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser, useFirestore, useDoc, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useDoc } from '@/firebase';
+import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Loader2, Scale, Send } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
@@ -30,8 +31,8 @@ import { articles } from '@/lib/placeholder-data';
 import Image from 'next/image';
 
 const formSchema = z.object({
-  articleName: z.string().min(2, {
-    message: 'Please enter a legal article name.',
+  question: z.string().min(2, {
+    message: 'Please enter a legal topic.',
   }),
 });
 
@@ -39,7 +40,7 @@ type ChatMessage = {
   isUser: boolean;
   text?: string;
   isLoading?: boolean;
-  data?: ArticleDefinitionAndHistoryOutput;
+  data?: LegalQuestionOutput;
 };
 
 type LawGptClientProps = {
@@ -59,7 +60,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      articleName: '',
+      question: '',
     },
   });
 
@@ -94,7 +95,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
       return;
     }
   
-    const userMessage = values.articleName;
+    const userMessage = values.question;
     form.reset();
   
     let newChatId = activeChatId;
@@ -131,8 +132,8 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     }
   
     try {
-      const result = await getArticleDefinitionAndHistory({
-        articleName: userMessage,
+      const result = await getLegalInformation({
+        question: userMessage,
       });
   
       const chatEntry = {
@@ -206,19 +207,14 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
                     ) : message.data ? (
                         <div className="space-y-6 prose prose-sm max-w-none text-card-foreground">
                             <div>
-                                <h3 className="font-bold font-headline text-lg mb-2">Definition</h3>
-                                <p>{message.data.definition}</p>
+                                <h3 className="font-bold font-headline text-lg mb-2">{message.data.topic}</h3>
+                                <p>{message.data.summary}</p>
                             </div>
                             <Separator />
                             <div>
-                                <h3 className="font-bold font-headline text-lg mb-2">History</h3>
-                                <p>{message.data.history}</p>
-                            </div>
-                            <Separator />
-                            <div>
-                                <h3 className="font-bold font-headline text-lg mb-2">Past Cases</h3>
+                                <h3 className="font-bold font-headline text-lg mb-2">Related Cases / Examples</h3>
                                 <ul className="list-disc pl-5 space-y-2">
-                                    {message.data.pastCases && message.data.pastCases.map((c, i) => <li key={i}>{c}</li>)}
+                                    {message.data.relatedCases && message.data.relatedCases.map((c, i) => <li key={i}>{c}</li>)}
                                 </ul>
                             </div>
                         </div>
@@ -242,12 +238,12 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
                 <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-4">
                   <FormField
                     control={form.control}
-                    name="articleName"
+                    name="question"
                     render={({ field }) => (
                       <FormItem className="flex-1">
                         <FormControl>
                           <Input
-                            placeholder="e.g., 'Article 370 of the Constitution of India'"
+                            placeholder="Ask about a case, a law, or a legal mystery..."
                             {...field}
                             disabled={isResponding}
                             autoComplete="off"

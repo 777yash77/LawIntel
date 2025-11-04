@@ -1,49 +1,53 @@
 'use server';
 
 /**
- * @fileOverview Retrieves the definition, history, and past cases of a legal article.
+ * @fileOverview Retrieves information about legal topics, cases, and concepts.
  *
- * - getArticleDefinitionAndHistory - A function that retrieves the definition and history of a legal article.
- * - ArticleDefinitionAndHistoryInput - The input type for the getArticleDefinitionAndHistory function.
- * - ArticleDefinitionAndHistoryOutput - The return type for the getArticleDefinitionAndHistory function.
+ * - getLegalInformation - A function that retrieves information about a legal topic.
+ * - LegalQuestionInput - The input type for the getLegalInformation function.
+ * - LegalQuestionOutput - The return type for the getLegalInformation function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const ArticleDefinitionAndHistoryInputSchema = z.object({
-  articleName: z.string().describe('The name of the legal article.'),
+const LegalQuestionInputSchema = z.object({
+  question: z.string().describe('The user\'s question about a legal topic, case, or concept.'),
 });
-export type ArticleDefinitionAndHistoryInput = z.infer<typeof ArticleDefinitionAndHistoryInputSchema>;
+export type LegalQuestionInput = z.infer<typeof LegalQuestionInputSchema>;
 
-const ArticleDefinitionAndHistoryOutputSchema = z.object({
-  definition: z.string().describe('A brief definition of the legal article.'),
-  history: z.string().describe('A brief history of the legal article.'),
-  pastCases: z.array(z.string()).describe('A few past cases where the article was used.'),
+const LegalQuestionOutputSchema = z.object({
+  topic: z.string().describe('The core legal topic identified in the user\'s question.'),
+  summary: z.string().describe('A concise summary answering the user\'s question.'),
+  relatedCases: z.array(z.string()).describe('A few past cases or examples related to the topic.'),
 });
-export type ArticleDefinitionAndHistoryOutput = z.infer<typeof ArticleDefinitionAndHistoryOutputSchema>;
+export type LegalQuestionOutput = z.infer<typeof LegalQuestionOutputSchema>;
 
-export async function getArticleDefinitionAndHistory(
-  input: ArticleDefinitionAndHistoryInput
-): Promise<ArticleDefinitionAndHistoryOutput> {
-  return articleDefinitionAndHistoryFlow(input);
+export async function getLegalInformation(
+  input: LegalQuestionInput
+): Promise<LegalQuestionOutput> {
+  return legalQuestionFlow(input);
 }
 
-const articleDefinitionAndHistoryPrompt = ai.definePrompt({
-  name: 'articleDefinitionAndHistoryPrompt',
-  input: {schema: ArticleDefinitionAndHistoryInputSchema},
-  output: {schema: ArticleDefinitionAndHistoryOutputSchema},
-  prompt: `You are an expert legal assistant. A user has requested information about the legal article "{{articleName}}". Provide a brief definition, a brief history of the article, and a few examples of past cases where the article was cited.`,
+const legalQuestionPrompt = ai.definePrompt({
+  name: 'legalQuestionPrompt',
+  input: {schema: LegalQuestionInputSchema},
+  output: {schema: LegalQuestionOutputSchema},
+  prompt: `You are lawIntel, an expert legal AI assistant. You are knowledgeable about a wide range of legal topics, including specific laws, landmark cases, legal history, and even unsolved mysteries.
+
+A user has asked the following question: "{{question}}".
+
+Based on this question, identify the core legal topic, provide a clear and concise summary that answers their question, and list a few relevant examples or past cases.`,
 });
 
-const articleDefinitionAndHistoryFlow = ai.defineFlow(
+const legalQuestionFlow = ai.defineFlow(
   {
-    name: 'articleDefinitionAndHistoryFlow',
-    inputSchema: ArticleDefinitionAndHistoryInputSchema,
-    outputSchema: ArticleDefinitionAndHistoryOutputSchema,
+    name: 'legalQuestionFlow',
+    inputSchema: LegalQuestionInputSchema,
+    outputSchema: LegalQuestionOutputSchema,
   },
   async input => {
-    const {output} = await articleDefinitionAndHistoryPrompt(input);
+    const {output} = await legalQuestionPrompt(input);
     return output!;
   }
 );
