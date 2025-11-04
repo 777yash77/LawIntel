@@ -1,0 +1,267 @@
+{
+  "entities": {
+    "Article": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Article",
+      "type": "object",
+      "description": "Represents a legal article displayed on the homepage.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Article entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the legal article."
+        },
+        "content": {
+          "type": "string",
+          "description": "Content of the legal article."
+        },
+        "publicationDate": {
+          "type": "string",
+          "description": "Date when the article was published.",
+          "format": "date-time"
+        },
+        "sourceUrl": {
+          "type": "string",
+          "description": "URL of the original source of the article.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "content",
+        "publicationDate",
+        "sourceUrl"
+      ]
+    },
+    "ChatMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatMessage",
+      "type": "object",
+      "description": "Represents a single message within a LawGPT chat conversation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ChatMessage entity."
+        },
+        "chatSessionId": {
+          "type": "string",
+          "description": "Reference to ChatSession. (Relationship: ChatSession 1:N ChatMessage)"
+        },
+        "sender": {
+          "type": "string",
+          "description": "The sender of the message (e.g., 'user' or 'LexiGen')."
+        },
+        "message": {
+          "type": "string",
+          "description": "The actual message content."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp indicating when the message was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "chatSessionId",
+        "sender",
+        "message",
+        "timestamp"
+      ]
+    },
+    "ChatSession": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatSession",
+      "type": "object",
+      "description": "Represents a LawGPT chat session.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ChatSession entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N ChatSession)"
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Timestamp indicating when the chat session started.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "Timestamp indicating when the chat session ended.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "startTime"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the LexiGen application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "User's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "User's last name."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "firstName",
+        "lastName"
+      ]
+    },
+    "EmergencyNumber": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "EmergencyNumber",
+      "type": "object",
+      "description": "Represents an emergency contact number.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the EmergencyNumber entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the emergency service (e.g., 'Police', 'Ambulance')."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Phone number for the emergency service."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "phoneNumber"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/articles/{articleId}",
+        "definition": {
+          "entityName": "Article",
+          "schema": {
+            "$ref": "#/backend/entities/Article"
+          },
+          "description": "Stores legal articles displayed on the homepage.",
+          "params": [
+            {
+              "name": "articleId",
+              "description": "Unique identifier for the article."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/emergencyNumbers/{emergencyNumberId}",
+        "definition": {
+          "entityName": "EmergencyNumber",
+          "schema": {
+            "$ref": "#/backend/entities/EmergencyNumber"
+          },
+          "description": "Stores emergency contact numbers.",
+          "params": [
+            {
+              "name": "emergencyNumberId",
+              "description": "Unique identifier for the emergency number."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Root-level user document, the uid is the document id.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "Unique identifier for the user (Firebase auth UID)."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/chatSessions/{chatSessionId}",
+        "definition": {
+          "entityName": "ChatSession",
+          "schema": {
+            "$ref": "#/backend/entities/ChatSession"
+          },
+          "description": "Stores LawGPT chat sessions for each user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "Unique identifier for the user."
+            },
+            {
+              "name": "chatSessionId",
+              "description": "Unique identifier for the chat session."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/chatSessions/{chatSessionId}/messages/{messageId}",
+        "definition": {
+          "entityName": "ChatMessage",
+          "schema": {
+            "$ref": "#/backend/entities/ChatMessage"
+          },
+          "description": "Stores individual chat messages within a LawGPT chat session.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "Unique identifier for the user."
+            },
+            {
+              "name": "chatSessionId",
+              "description": "Unique identifier for the chat session."
+            },
+            {
+              "name": "messageId",
+              "description": "Unique identifier for the chat message."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to ensure security, scalability, and ease of debugging, adhering to the core design principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). Authorization Independence is achieved through denormalization. User data, chat sessions, and chat messages are structured to avoid hierarchical authorization dependencies, simplifying security rules and enabling atomic operations.\n\n- User data is stored under `/users/{userId}`, ensuring that user-specific data is isolated and access is controlled by the `userId`. Chat sessions are created as subcollections under the respective user (`/users/{userId}/chatSessions/{chatSessionId}`), ensuring ownership is easily verifiable via path. Chat messages are created as subcollections under the chat session (`/users/{userId}/chatSessions/{chatSessionId}/messages/{messageId}`).\n- Articles and emergency numbers are stored in root-level collections (`/articles`, `/emergencyNumbers`) since they do not have any specific user ownership associated with them.\n\nThis structure achieves Authorization Independence by:\n\n1.  **User Data:** Access is directly controlled via the path `/users/{userId}`, requiring no `get()` calls to parent documents for authorization.\n2.  **Chat Sessions:** Stored as subcollections under users (`/users/{userId}/chatSessions/{chatSessionId}`). The security rules can directly check `request.auth.uid == userId` without needing to fetch the user document.\n3.  **Chat Messages:** Stored as subcollections under chat sessions (`/users/{userId}/chatSessions/{chatSessionId}/messages/{messageId}`). Similar to chat sessions, authorization rules only need to check the `userId` in the path.\n\nThis structure supports the required QAPs by:\n\n1.  **Segregation:** Different types of data are stored in separate collections. User-specific data is segregated under `/users/{userId}`, while global data like articles and emergency numbers are stored in root-level collections.\n2.  **No Filters:** The structure is designed such that list operations do not require filtering based on user roles or permissions. Access is granted based on the path, ensuring that rules are not used as filters."
+  }
+}

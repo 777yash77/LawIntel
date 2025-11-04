@@ -1,0 +1,137 @@
+/**
+ * @fileOverview Firestore Security Rules for LexiGen.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user-generated content (chat sessions and messages)
+ * and public read access for global data (articles and emergency numbers).
+ *
+ * Data Structure:
+ * - /articles/{articleId}: Public legal articles.
+ * - /emergencyNumbers/{emergencyNumberId}: Public emergency contact numbers.
+ * - /users/{userId}: User profiles, where {userId} matches the Firebase auth UID.
+ * - /users/{userId}/chatSessions/{chatSessionId}: Chat sessions for each user.
+ * - /users/{userId}/chatSessions/{chatSessionId}/messages/{messageId}: Chat messages within a session.
+ *
+ * Key Security Decisions:
+ * - User listing is disallowed.
+ * - Articles and emergency numbers are publicly readable but not writable by clients.
+ * - Chat sessions and messages are strictly owned by the user, enforced through path-based authorization.
+ *
+ * Denormalization for Authorization:
+ * - The data structure uses path-based authorization to avoid costly `get()` calls. The `userId` is embedded in the path for chat sessions and messages,
+ *   allowing rules to directly check `request.auth.uid == userId` without fetching the user document.
+ *
+ * Structural Segregation:
+ * - Public data (articles, emergency numbers) is stored in top-level collections, while private user data (chat sessions, messages) is stored under /users/{userId}.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Grants public read access to legal articles and restricts write access.
+     * @path /articles/{articleId}
+     * @allow get, list: if true
+     * @deny create, update, delete: if false
+     * @principle Allows public read access for articles, but denies all write operations.
+     */
+    match /articles/{articleId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Grants public read access to emergency numbers and restricts write access.
+     * @path /emergencyNumbers/{emergencyNumberId}
+     * @allow get, list: if true
+     * @deny create, update, delete: if false
+     * @principle Allows public read access for emergency numbers, but denies all write operations.
+     */
+    match /emergencyNumbers/{emergencyNumberId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Manages user profiles with owner-only access. Allows creating a user document with a matching UID and enforces ownership for all operations.
+     * @path /users/{userId}
+     * @allow create: if isSignedIn() && isOwner(userId)
+     * @allow get: if isOwner(userId)
+     * @allow update: if isExistingOwner(userId)
+     * @allow delete: if isExistingOwner(userId)
+     * @allow list: if false
+     * @deny create: if !isOwner(userId)
+     * @deny update: if !isOwner(userId)
+     * @deny delete: if !isOwner(userId)
+     * @principle Enforces document ownership for writes, restricts access to a user's own data tree, validates relational integrity between documents.
+     */
+    match /users/{userId} {
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow get: if isOwner(userId);
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+      allow list: if false;
+    }
+
+    /**
+     * @description Manages chat sessions for each user with owner-only access.
+     * @path /users/{userId}/chatSessions/{chatSessionId}
+     * @allow create: if isSignedIn() && isOwner(userId)
+     * @allow get: if isOwner(userId)
+     * @allow update: if isExistingOwner(userId);
+     * @allow delete: if isExistingOwner(userId);
+     * @allow list: if isOwner(userId)
+     * @deny create: if !isOwner(userId)
+     * @deny update: if !isOwner(userId)
+     * @deny delete: if !isOwner(userId)
+     * @principle Enforces document ownership for writes, restricts access to a user's own data tree, validates relational integrity between documents.
+     */
+    match /users/{userId}/chatSessions/{chatSessionId} {
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+      allow get: if isOwner(userId);
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+      allow list: if isOwner(userId);
+    }
+
+    /**
+     * @description Manages chat messages within a LawGPT chat session with owner-only access.
+     * @path /users/{userId}/chatSessions/{chatSessionId}/messages/{messageId}
+     * @allow create: if isSignedIn() && isOwner(userId)
+     * @allow get: if isOwner(userId)
+     * @allow update: if isExistingOwner(userId);
+     * @allow delete: if isExistingOwner(userId);
+     * @allow list: if isOwner(userId)
+     * @deny create: if !isOwner(userId)
+     * @deny update: if !isOwner(userId)
+     * @deny delete: if !isOwner(userId)
+     * @principle Enforces document ownership for writes, restricts access to a user's own data tree, validates relational integrity between documents.
+     */
+    match /users/{userId}/chatSessions/{chatSessionId}/messages/{messageId} {
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.chatSessionId == chatSessionId;
+      allow get: if isOwner(userId);
+      allow update: if isExistingOwner(userId) && request.resource.data.chatSessionId == resource.data.chatSessionId;
+      allow delete: if isExistingOwner(userId);
+      allow list: if isOwner(userId);
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+    }
+  }
+}
