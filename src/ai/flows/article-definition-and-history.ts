@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * @fileOverview Retrieves the definition and history of a legal article.
+ * @fileOverview Retrieves the definition, history, and past cases of a legal article.
  *
  * - getArticleDefinitionAndHistory - A function that retrieves the definition and history of a legal article.
  * - ArticleDefinitionAndHistoryInput - The input type for the getArticleDefinitionAndHistory function.
@@ -19,6 +19,7 @@ export type ArticleDefinitionAndHistoryInput = z.infer<typeof ArticleDefinitionA
 const ArticleDefinitionAndHistoryOutputSchema = z.object({
   definition: z.string().describe('A brief definition of the legal article.'),
   history: z.string().describe('A brief history of the legal article.'),
+  pastCases: z.array(z.string()).describe('A few past cases where the article was used.'),
 });
 export type ArticleDefinitionAndHistoryOutput = z.infer<typeof ArticleDefinitionAndHistoryOutputSchema>;
 
@@ -32,9 +33,7 @@ const articleDefinitionAndHistoryPrompt = ai.definePrompt({
   name: 'articleDefinitionAndHistoryPrompt',
   input: {schema: ArticleDefinitionAndHistoryInputSchema},
   output: {schema: ArticleDefinitionAndHistoryOutputSchema},
-  prompt: `You are an expert legal assistant.  A user has requested information about the legal article "{{articleName}}".  Provide a brief definition and a brief history of the article.
-Definition:
-History:`,
+  prompt: `You are an expert legal assistant. A user has requested information about the legal article "{{articleName}}". Provide a brief definition, a brief history of the article, and a few examples of past cases where the article was cited.`,
 });
 
 const articleDefinitionAndHistoryFlow = ai.defineFlow(

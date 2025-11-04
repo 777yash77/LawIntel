@@ -20,9 +20,11 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAuth } from '@/hooks/use-auth';
+import { useUser, useFirestore, useDoc, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { Loader2, Scale, Send } from 'lucide-react';
 import { Separator } from './ui/separator';
+import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 const formSchema = z.object({
   articleName: z.string().min(2, {
@@ -37,8 +39,17 @@ type ChatMessage = {
   data?: ArticleDefinitionAndHistoryOutput;
 };
 
-export default function LawGptClient() {
-  const { user } = useAuth();
+type LawGptClientProps = {
+  activeChatId: string | null;
+  setActiveChatId: (id: string) => void;
+};
+
+
+export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptClientProps) {
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const router = useRouter();
+
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [isResponding, setIsResponding] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -50,6 +61,22 @@ export default function LawGptClient() {
     },
   });
 
+  const chatDocRef = user && activeChatId ? doc(firestore, 'users', user.uid, 'chat_history', activeChatId) : null;
+  const { data: activeChat } = useDoc(chatDocRef);
+
+
+  useEffect(() => {
+    if (activeChat) {
+      setChatHistory([
+        { isUser: true, text: activeChat.userMessage },
+        { isUser: false, data: activeChat.geminiResponse },
+      ]);
+    } else {
+      setChatHistory([]);
+    }
+  }, [activeChat]);
+
+
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
     if (viewport) {
@@ -60,6 +87,12 @@ export default function LawGptClient() {
   }, [chatHistory]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user) {
+      // Handle case where user is not logged in
+      router.push('/login');
+      return;
+    }
+
     setIsResponding(true);
     setChatHistory((prev) => [
       ...prev,
@@ -72,6 +105,26 @@ export default function LawGptClient() {
       const result = await getArticleDefinitionAndHistory({
         articleName: values.articleName,
       });
+
+      const chatEntry = {
+        userId: user.uid,
+        timestamp: serverTimestamp(),
+        userMessage: values.articleName,
+        geminiResponse: result,
+      };
+
+      if (activeChatId) {
+        const docRef = doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
+        setDocumentNonBlocking(docRef, chatEntry, { merge: true });
+      } else {
+        const colRef = collection(firestore, 'users', user.uid, 'chat_history');
+        const newDoc = await addDocumentNonBlocking(colRef, chatEntry);
+        if(newDoc) {
+            setActiveChatId(newDoc.id);
+            router.push(`/law-gpt/${newDoc.id}`);
+        }
+      }
+
       setChatHistory((prev) => {
         const newHistory = [...prev];
         const lastMessage = newHistory[newHistory.length - 1];
@@ -121,7 +174,7 @@ export default function LawGptClient() {
                   </Avatar>
                 )}
                 <div
-                  className={`max-w-xl w-full rounded-lg px-4 py-3 shadow-sm ${
+                  className={`max-w-3xl w-full rounded-lg px-4 py-3 shadow-sm ${
                     message.isUser
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-card border'
@@ -133,7 +186,7 @@ export default function LawGptClient() {
                         <span>Thinking...</span>
                     </div>
                   ) : message.data ? (
-                    <div className="space-y-4 prose prose-sm max-w-none">
+                    <div className="space-y-6 prose prose-sm max-w-none">
                         <div>
                             <h3 className="font-bold font-headline text-lg mb-2">Definition</h3>
                             <p>{message.data.definition}</p>
@@ -143,6 +196,13 @@ export default function LawGptClient() {
                             <h3 className="font-bold font-headline text-lg mb-2">History</h3>
                             <p>{message.data.history}</p>
                         </div>
+                        <Separator />
+                         <div>
+                            <h3 className="font-bold font-headline text-lg mb-2">Past Cases</h3>
+                            <ul className="list-disc pl-5 space-y-2">
+                               {message.data.pastCases.map((c, i) => <li key={i}>{c}</li>)}
+                            </ul>
+                        </div>
                     </div>
                   ) : (
                     <p>{message.text}</p>
@@ -150,7 +210,7 @@ export default function LawGptClient() {
                 </div>
                  {message.isUser && user && (
                   <Avatar>
-                    <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                 )}
               </div>
