@@ -1,4 +1,4 @@
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/article-definition-and-history.ts';
+// This file is used for local development and should not be modified.
