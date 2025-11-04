@@ -51,7 +51,7 @@ export default function LawGptPage({ activeChatId: activeChatIdFromProps }: LawG
 
   return (
     <SidebarProvider>
-      <div className="flex flex-col h-full bg-background">
+      <div className="flex flex-col h-screen bg-background">
         <Header />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar>

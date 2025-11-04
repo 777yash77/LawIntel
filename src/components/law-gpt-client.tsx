@@ -68,7 +68,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     return doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
   }, [user, activeChatId, firestore]);
   
-  const { data: activeChat } = useDoc(chatDocRef);
+  const { data: activeChat, isLoading: isChatLoading } = useDoc(chatDocRef);
 
 
   useEffect(() => {
@@ -81,6 +81,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
             newHistory.push({ isUser: false, data: activeChat.geminiResponse });
         }
         setChatHistory(newHistory);
+        setIsResponding(false); 
     } else if (!activeChatId) {
         setChatHistory([]);
     }
@@ -96,18 +97,38 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     const userMessage = values.articleName;
     form.reset();
   
-    // For a new chat, start with a clean local history
-    if (!activeChatId) {
-      setChatHistory([]); 
-    }
-  
-    // Add user message and loading indicator
-    setChatHistory([
+    let newChatId = activeChatId;
+
+    // Optimistically update UI
+    setChatHistory((prev) => [
+      ...prev,
       { isUser: true, text: userMessage },
-      { isUser: false, isLoading: true }
+      { isUser: false, isLoading: true },
     ]);
-  
+    
     setIsResponding(true);
+
+    // If it is a new chat, create it first
+    if (!newChatId) {
+      const colRef = collection(firestore, 'users', user.uid, 'chat_history');
+      const newDoc = await addDocumentNonBlocking(colRef, {
+        userId: user.uid,
+        timestamp: serverTimestamp(),
+        userMessage: "New Chat", // Placeholder
+        geminiResponse: {}, // Placeholder
+      });
+      if (newDoc) {
+        newChatId = newDoc.id;
+        router.push(`/law-gpt/${newDoc.id}`); 
+        setActiveChatId(newDoc.id);
+      } else {
+        // Handle failure to create new chat doc
+        console.error("Failed to create new chat document.");
+        setIsResponding(false);
+        // Maybe show a toast error
+        return;
+      }
+    }
   
     try {
       const result = await getArticleDefinitionAndHistory({
@@ -121,22 +142,10 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
         geminiResponse: result,
       };
       
-      if (activeChatId) {
-        const docRef = doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
+      if (newChatId) {
+        const docRef = doc(firestore, 'users', user.uid, 'chat_history', newChatId);
         await setDocumentNonBlocking(docRef, chatEntry, { merge: true });
         // The useDoc hook will handle updating the view from Firestore
-        setIsResponding(false);
-
-      } else {
-        const colRef = collection(firestore, 'users', user.uid, 'chat_history');
-        const newDoc = await addDocumentNonBlocking(colRef, chatEntry);
-        if (newDoc) {
-          // Navigate to the new chat page. The useDoc hook will then load the data.
-          router.push(`/law-gpt/${newDoc.id}`);
-        } else {
-            // Handle case where document creation failed but didn't throw
-            setIsResponding(false);
-        }
       }
   
     } catch (error) {
@@ -152,107 +161,115 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] h-full">
-      {/* Chat Column */}
-      <div className="flex flex-col h-full">
-        <ScrollArea className="flex-1 p-4 md:p-6">
-          <div className="max-w-4xl mx-auto space-y-6">
-          {chatHistory.length === 0 && !isResponding ? (
-              <div className="text-center py-16">
-              <Scale className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h2 className="mt-4 text-2xl font-semibold font-headline">LawBot</h2>
-              <p className="mt-2 text-muted-foreground">
-                  Ask about any legal article to get its definition and history.
-              </p>
+    <div className="flex h-full w-full">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Chat Column */}
+        <div className="flex flex-col h-full">
+          <ScrollArea className="flex-1 p-4 md:p-6">
+            <div className="max-w-4xl mx-auto space-y-6">
+            {(isChatLoading && activeChatId) ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-          ) : (
-              chatHistory.map((message, index) => (
-              <div
-                  key={index}
-                  className={`flex items-start gap-4 ${message.isUser ? 'justify-end' : ''}`}
-              >
-                  {!message.isUser && (
-                  <Avatar>
-                      <AvatarFallback><Scale /></AvatarFallback>
-                  </Avatar>
-                  )}
-                  <div
-                  className={`max-w-3xl w-full rounded-lg px-4 py-3 shadow-sm ${
-                      message.isUser
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-card border'
-                  }`}
-                  >
-                  {message.isLoading ? (
-                      <div className="flex items-center space-x-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Thinking...</span>
-                      </div>
-                  ) : message.data ? (
-                      <div className="space-y-6 prose prose-sm max-w-none text-card-foreground">
-                          <div>
-                              <h3 className="font-bold font-headline text-lg mb-2">Definition</h3>
-                              <p>{message.data.definition}</p>
-                          </div>
-                          <Separator />
-                          <div>
-                              <h3 className="font-bold font-headline text-lg mb-2">History</h3>
-                              <p>{message.data.history}</p>
-                          </div>
-                          <Separator />
-                          <div>
-                              <h3 className="font-bold font-headline text-lg mb-2">Past Cases</h3>
-                              <ul className="list-disc pl-5 space-y-2">
-                                  {message.data.pastCases.map((c, i) => <li key={i}>{c}</li>)}
-                              </ul>
-                          </div>
-                      </div>
-                  ) : (
-                      <p>{message.text}</p>
-                  )}
-                  </div>
-                  {message.isUser && user && (
-                  <Avatar>
-                      <AvatarFallback>{user.isAnonymous ? 'A' : user.email?.charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  )}
-              </div>
-              ))
-          )}
-          </div>
-        </ScrollArea>
-        <div className="shrink-0 border-t bg-background">
-          <div className="max-w-4xl mx-auto p-4">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-4">
-                <FormField
-                  control={form.control}
-                  name="articleName"
-                  render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., 'Article 370 of the Constitution of India'"
-                          {...field}
-                          disabled={isResponding}
-                          autoComplete="off"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" disabled={isResponding} size="icon">
-                  <Send className="h-4 w-4" />
-                  <span className="sr-only">Send</span>
-                </Button>
-              </form>
-            </Form>
+            ) : chatHistory.length === 0 && !isResponding ? (
+                <div className="text-center py-16">
+                <Scale className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h2 className="mt-4 text-2xl font-semibold font-headline">LawBot</h2>
+                <p className="mt-2 text-muted-foreground">
+                    Ask about any legal article to get its definition and history.
+                </p>
+                </div>
+            ) : (
+                chatHistory.map((message, index) => (
+                <div
+                    key={index}
+                    className={`flex items-start gap-4 ${message.isUser ? 'justify-end' : ''}`}
+                >
+                    {!message.isUser && (
+                    <Avatar>
+                        <AvatarFallback><Scale /></AvatarFallback>
+                    </Avatar>
+                    )}
+                    <div
+                    className={`max-w-3xl w-full rounded-lg px-4 py-3 shadow-sm ${
+                        message.isUser
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-card border'
+                    }`}
+                    >
+                    {message.isLoading ? (
+                        <div className="flex items-center space-x-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Thinking...</span>
+                        </div>
+                    ) : message.data ? (
+                        <div className="space-y-6 prose prose-sm max-w-none text-card-foreground">
+                            <div>
+                                <h3 className="font-bold font-headline text-lg mb-2">Definition</h3>
+                                <p>{message.data.definition}</p>
+                            </div>
+                            <Separator />
+                            <div>
+                                <h3 className="font-bold font-headline text-lg mb-2">History</h3>
+                                <p>{message.data.history}</p>
+                            </div>
+                            <Separator />
+                            <div>
+                                <h3 className="font-bold font-headline text-lg mb-2">Past Cases</h3>
+                                <ul className="list-disc pl-5 space-y-2">
+                                    {message.data.pastCases.map((c, i) => <li key={i}>{c}</li>)}
+                                </ul>
+                            </div>
+                        </div>
+                    ) : (
+                        <p>{message.text}</p>
+                    )}
+                    </div>
+                    {message.isUser && user && (
+                    <Avatar>
+                        <AvatarFallback>{user.isAnonymous ? 'A' : user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    )}
+                </div>
+                ))
+            )}
+            </div>
+          </ScrollArea>
+          <div className="shrink-0 border-t bg-background">
+            <div className="max-w-4xl mx-auto p-4">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-4">
+                  <FormField
+                    control={form.control}
+                    name="articleName"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., 'Article 370 of the Constitution of India'"
+                            {...field}
+                            disabled={isResponding}
+                            autoComplete="off"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" disabled={isResponding} size="icon">
+                    <Send className="h-4 w-4" />
+                    <span className="sr-only">Send</span>
+                  </Button>
+                </form>
+              </Form>
+            </div>
           </div>
         </div>
       </div>
-      {/* Articles Column */}
-      <div className="hidden md:flex w-full flex-col border-l bg-muted/20 p-4">
+
+       {/* Articles Column */}
+       <div className="hidden md:flex w-[320px] shrink-0 flex-col border-l bg-muted/20 p-4">
         <ScrollArea className="flex-1">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold font-headline mb-4">Latest Articles</h3>
