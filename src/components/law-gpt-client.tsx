@@ -163,7 +163,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   return (
     <div className="flex h-full w-full">
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-full">
         {/* Chat Column */}
         <div className="flex flex-col h-full">
           <ScrollArea className="flex-1 p-4 md:p-6">
@@ -218,7 +218,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
                             <div>
                                 <h3 className="font-bold font-headline text-lg mb-2">Past Cases</h3>
                                 <ul className="list-disc pl-5 space-y-2">
-                                    {message.data.pastCases.map((c, i) => <li key={i}>{c}</li>)}
+                                    {message.data.pastCases && message.data.pastCases.map((c, i) => <li key={i}>{c}</li>)}
                                 </ul>
                             </div>
                         </div>
