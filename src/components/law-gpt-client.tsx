@@ -89,12 +89,20 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     }
   
     const userMessage = values.articleName;
+  
+    // For new chats, clear history locally first
+    if (!activeChatId) {
+        setChatHistory([]);
+    }
+
     form.reset();
   
     setIsResponding(true);
-    setChatHistory([
-      { isUser: true, text: userMessage },
-      { isUser: false, isLoading: true },
+    // Append user message and loading state
+    setChatHistory(prev => [
+        ...prev,
+        { isUser: true, text: userMessage },
+        { isUser: false, isLoading: true },
     ]);
   
     try {
@@ -111,11 +119,13 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
       
       if (activeChatId) {
         const docRef = doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
+        // This will trigger the useDoc hook to update the chat
         await setDocumentNonBlocking(docRef, chatEntry, { merge: true });
       } else {
         const colRef = collection(firestore, 'users', user.uid, 'chat_history');
         const newDoc = await addDocumentNonBlocking(colRef, chatEntry);
         if (newDoc) {
+          // Redirect to the new chat URL, which will fetch the correct data
           router.push(`/law-gpt/${newDoc.id}`);
         }
       }
@@ -268,3 +278,5 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     </div>
   );
 }
+
+    
