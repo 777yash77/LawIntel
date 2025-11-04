@@ -96,21 +96,17 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     const userMessage = values.articleName;
     form.reset();
   
-    let tempHistory: ChatMessage[] = [];
-  
-    // For a new chat, start with a clean history.
+    // For a new chat, start with a clean local history
     if (!activeChatId) {
       setChatHistory([]); 
     }
   
     // Add user message and loading indicator
-    const updatedHistory = [
-      ...tempHistory,
+    setChatHistory([
       { isUser: true, text: userMessage },
       { isUser: false, isLoading: true }
-    ];
+    ]);
   
-    setChatHistory(updatedHistory);
     setIsResponding(true);
   
     try {
@@ -135,8 +131,10 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
         const colRef = collection(firestore, 'users', user.uid, 'chat_history');
         const newDoc = await addDocumentNonBlocking(colRef, chatEntry);
         if (newDoc) {
+          // Navigate to the new chat page. The useDoc hook will then load the data.
           router.push(`/law-gpt/${newDoc.id}`);
         } else {
+            // Handle case where document creation failed but didn't throw
             setIsResponding(false);
         }
       }
@@ -144,12 +142,9 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     } catch (error) {
       console.error(error);
       setChatHistory((prev) => {
-        const newHistory = [...prev];
-        const lastMessage = newHistory[newHistory.length - 1];
-        if (lastMessage && !lastMessage.isUser && lastMessage.isLoading) {
-          lastMessage.isLoading = false;
-          lastMessage.text = 'Sorry, I encountered an error. Please try again.';
-        }
+        // Only keep the user message and replace the loading indicator with an error
+        const newHistory = prev.filter(m => m.isUser);
+        newHistory.push({ isUser: false, text: 'Sorry, I encountered an error. Please try again.' });
         return newHistory;
       });
       setIsResponding(false);
@@ -157,7 +152,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] h-full overflow-hidden">
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] h-full">
       {/* Chat Column */}
       <div className="flex flex-col h-full">
         <ScrollArea className="flex-1 p-4 md:p-6">
