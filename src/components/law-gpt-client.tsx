@@ -76,16 +76,6 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     }
   }, [activeChat]);
 
-
-  useEffect(() => {
-    const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
-    if (viewport) {
-      setTimeout(() => {
-        viewport.scrollTop = viewport.scrollHeight;
-      }, 0);
-    }
-  }, [chatHistory]);
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) {
       // User should be anonymously authenticated by this point via useUser hook.
