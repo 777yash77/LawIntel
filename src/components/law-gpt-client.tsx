@@ -73,10 +73,14 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
 
   useEffect(() => {
     if (activeChatId && activeChat) {
-        setChatHistory([
-            { isUser: true, text: activeChat.userMessage },
-            { isUser: false, data: activeChat.geminiResponse },
-        ]);
+        const newHistory = [];
+        if(activeChat.userMessage) {
+            newHistory.push({ isUser: true, text: activeChat.userMessage });
+        }
+        if(activeChat.geminiResponse) {
+            newHistory.push({ isUser: false, data: activeChat.geminiResponse });
+        }
+        setChatHistory(newHistory);
     } else if (!activeChatId) {
         setChatHistory([]);
     }
@@ -95,7 +99,6 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     const isNewChat = !activeChatId;
     let tempHistory: ChatMessage[] = [];
   
-    // For a new chat, start with an empty history. For existing, use current.
     if (isNewChat) {
       setChatHistory([]);
     }
@@ -123,8 +126,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
       
       if (activeChatId) {
         const docRef = doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
-        await setDocumentNonBlocking(docRef, chatEntry, { merge: true });
-        // The useDoc hook will handle updating the UI, so we can stop the loading indicator manually
+        setDocumentNonBlocking(docRef, chatEntry, { merge: true });
         setIsResponding(false);
 
       } else {
@@ -132,7 +134,6 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
         const newDoc = await addDocumentNonBlocking(colRef, chatEntry);
         if (newDoc) {
           router.push(`/law-gpt/${newDoc.id}`);
-          // Redirect will cause a full re-render, no need to set isResponding to false
         } else {
             setIsResponding(false);
         }
@@ -153,79 +154,76 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     }
   }
 
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] h-full overflow-hidden">
       {/* Chat Column */}
-      <div className="flex flex-col h-full overflow-hidden">
-         <div className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full p-4 md:p-6">
-                <div className="max-w-4xl mx-auto space-y-6">
-                {chatHistory.length === 0 && !isResponding ? (
-                    <div className="text-center py-16">
-                    <Scale className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h2 className="mt-4 text-2xl font-semibold font-headline">LawBot</h2>
-                    <p className="mt-2 text-muted-foreground">
-                        Ask about any legal article to get its definition and history.
-                    </p>
-                    </div>
-                ) : (
-                    chatHistory.map((message, index) => (
-                    <div
-                        key={index}
-                        className={`flex items-start gap-4 ${message.isUser ? 'justify-end' : ''}`}
-                    >
-                        {!message.isUser && (
-                        <Avatar>
-                            <AvatarFallback><Scale /></AvatarFallback>
-                        </Avatar>
-                        )}
-                        <div
-                        className={`max-w-3xl w-full rounded-lg px-4 py-3 shadow-sm ${
-                            message.isUser
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-card border'
-                        }`}
-                        >
-                        {message.isLoading ? (
-                            <div className="flex items-center space-x-2">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <span>Thinking...</span>
-                            </div>
-                        ) : message.data ? (
-                            <div className="space-y-6 prose prose-sm max-w-none text-card-foreground">
-                                <div>
-                                    <h3 className="font-bold font-headline text-lg mb-2">Definition</h3>
-                                    <p>{message.data.definition}</p>
-                                </div>
-                                <Separator />
-                                <div>
-                                    <h3 className="font-bold font-headline text-lg mb-2">History</h3>
-                                    <p>{message.data.history}</p>
-                                </div>
-                                <Separator />
-                                <div>
-                                    <h3 className="font-bold font-headline text-lg mb-2">Past Cases</h3>
-                                    <ul className="list-disc pl-5 space-y-2">
-                                        {message.data.pastCases.map((c, i) => <li key={i}>{c}</li>)}
-                                    </ul>
-                                </div>
-                            </div>
-                        ) : (
-                            <p>{message.text}</p>
-                        )}
-                        </div>
-                        {message.isUser && user && (
-                        <Avatar>
-                            <AvatarFallback>{user.isAnonymous ? 'A' : user.email?.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        )}
-                    </div>
-                    ))
-                )}
-                </div>
-            </ScrollArea>
-        </div>
+      <div className="flex flex-col h-full">
+        <ScrollArea className="flex-1">
+          <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
+          {chatHistory.length === 0 && !isResponding ? (
+              <div className="text-center py-16">
+              <Scale className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h2 className="mt-4 text-2xl font-semibold font-headline">LawBot</h2>
+              <p className="mt-2 text-muted-foreground">
+                  Ask about any legal article to get its definition and history.
+              </p>
+              </div>
+          ) : (
+              chatHistory.map((message, index) => (
+              <div
+                  key={index}
+                  className={`flex items-start gap-4 ${message.isUser ? 'justify-end' : ''}`}
+              >
+                  {!message.isUser && (
+                  <Avatar>
+                      <AvatarFallback><Scale /></AvatarFallback>
+                  </Avatar>
+                  )}
+                  <div
+                  className={`max-w-3xl w-full rounded-lg px-4 py-3 shadow-sm ${
+                      message.isUser
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-card border'
+                  }`}
+                  >
+                  {message.isLoading ? (
+                      <div className="flex items-center space-x-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Thinking...</span>
+                      </div>
+                  ) : message.data ? (
+                      <div className="space-y-6 prose prose-sm max-w-none text-card-foreground">
+                          <div>
+                              <h3 className="font-bold font-headline text-lg mb-2">Definition</h3>
+                              <p>{message.data.definition}</p>
+                          </div>
+                          <Separator />
+                          <div>
+                              <h3 className="font-bold font-headline text-lg mb-2">History</h3>
+                              <p>{message.data.history}</p>
+                          </div>
+                          <Separator />
+                          <div>
+                              <h3 className="font-bold font-headline text-lg mb-2">Past Cases</h3>
+                              <ul className="list-disc pl-5 space-y-2">
+                                  {message.data.pastCases.map((c, i) => <li key={i}>{c}</li>)}
+                              </ul>
+                          </div>
+                      </div>
+                  ) : (
+                      <p>{message.text}</p>
+                  )}
+                  </div>
+                  {message.isUser && user && (
+                  <Avatar>
+                      <AvatarFallback>{user.isAnonymous ? 'A' : user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  )}
+              </div>
+              ))
+          )}
+          </div>
+        </ScrollArea>
         <div className="shrink-0 border-t bg-background">
           <div className="max-w-4xl mx-auto p-4">
             <Form {...form}>
