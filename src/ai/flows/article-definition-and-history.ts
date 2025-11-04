@@ -12,7 +12,10 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const LegalQuestionInputSchema = z.object({
-  question: z.string().describe('The user\'s question about a legal topic, case, or concept.'),
+  question: z.string().describe("The user's question about a legal topic, case, or concept."),
+  photoDataUri: z.string().optional().describe(
+    "An optional photo of a document or subject, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+  ),
 });
 export type LegalQuestionInput = z.infer<typeof LegalQuestionInputSchema>;
 
@@ -33,11 +36,16 @@ const legalQuestionPrompt = ai.definePrompt({
   name: 'legalQuestionPrompt',
   input: {schema: LegalQuestionInputSchema},
   output: {schema: LegalQuestionOutputSchema},
-  prompt: `You are lawIntel, an expert legal AI assistant. You are knowledgeable about a wide range of legal topics, including specific laws, landmark cases, legal history, and even unsolved mysteries.
+  prompt: `You are lawIntel, an expert legal AI assistant with deep search capabilities. You are knowledgeable about a wide range of legal topics, including specific laws, landmark cases, legal history, and even unsolved mysteries.
 
 A user has asked the following question: "{{question}}".
 
-Based on this question, identify the core legal topic, provide a clear and concise summary that answers their question, and list a few relevant examples or past cases.`,
+{{#if photoDataUri}}
+The user has also provided an image for analysis. Use the contents of this image as primary context for your answer.
+Image: {{media url=photoDataUri}}
+{{/if}}
+
+Perform a deep search on this topic. Based on the user's question and any provided image, identify the core legal topic, provide a clear, comprehensive summary that answers their question, and list relevant examples, precedents, or past cases. Be thorough and detailed in your response.`,
 });
 
 const legalQuestionFlow = ai.defineFlow(
