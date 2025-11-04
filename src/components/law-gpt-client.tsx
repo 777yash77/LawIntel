@@ -52,7 +52,6 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   const { user } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [isResponding, setIsResponding] = useState(false);
@@ -73,16 +72,15 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
 
 
   useEffect(() => {
-    if (activeChat) {
+    if (activeChatId && activeChat) {
       setChatHistory([
         { isUser: true, text: activeChat.userMessage },
         { isUser: false, data: activeChat.geminiResponse },
       ]);
-    } else {
-      // When there is no active chat (new chat), clear the history
+    } else if (!activeChatId) {
       setChatHistory([]);
     }
-  }, [activeChat]);
+  }, [activeChat, activeChatId]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) {
@@ -93,11 +91,6 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     const userMessage = values.articleName;
     form.reset();
   
-    // If it's a new chat, clear the view first
-    if (!activeChatId) {
-      setChatHistory([]);
-    }
-
     setIsResponding(true);
     setChatHistory([
       { isUser: true, text: userMessage },
@@ -118,9 +111,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
       
       if (activeChatId) {
         const docRef = doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
-        // The useDoc hook will handle updating the UI from Firestore data
         await setDocumentNonBlocking(docRef, chatEntry, { merge: true });
-        // The local state is now managed by the useDoc hook, so we don't set it manually
       } else {
         const colRef = collection(firestore, 'users', user.uid, 'chat_history');
         const newDoc = await addDocumentNonBlocking(colRef, chatEntry);
@@ -149,8 +140,8 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] h-full">
       {/* Chat Column */}
       <div className="flex flex-col h-full">
-         <ScrollArea className="flex-1" ref={scrollAreaRef}>
-            <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
+         <ScrollArea className="flex-1 p-4 md:p-6">
+            <div className="max-w-4xl mx-auto space-y-6">
               {chatHistory.length === 0 && !isResponding ? (
                   <div className="text-center py-16">
                   <Scale className="mx-auto h-12 w-12 text-muted-foreground" />
