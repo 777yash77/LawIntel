@@ -18,7 +18,9 @@ export default function LawGptPage() {
   const firestore = useFirestore();
   const router = useRouter();
   const params = useParams();
-  const [activeChatId, setActiveChatId] = useState<string | null>(typeof params.chatId === 'string' ? params.chatId : null);
+  const activeChatIdFromUrl = typeof params.chatId === 'string' ? params.chatId : null;
+
+  const [activeChatId, setActiveChatId] = useState<string | null>(activeChatIdFromUrl);
 
   const chatHistoryQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -50,7 +52,7 @@ export default function LawGptPage() {
                 {chatHistory && chatHistory.map(chat => (
                   <SidebarMenuItem key={chat.id}>
                     <SidebarMenuButton asChild isActive={chat.id === activeChatId}>
-                      <Link href={`/law-gpt/${chat.id}`} onClick={() => setActiveChatId(chat.id)}>
+                      <Link href={`/law-gpt/${chat.id}`}>
                         <MessageSquare />
                         <span>{chat.userMessage.substring(0, 20)}...</span>
                       </Link>
