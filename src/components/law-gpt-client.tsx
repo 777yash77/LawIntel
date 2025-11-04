@@ -96,20 +96,24 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     const userMessage = values.articleName;
     form.reset();
   
-    const isNewChat = !activeChatId;
-    let tempHistory: ChatMessage[] = [];
+    let tempHistory: ChatMessage[];
   
-    if (isNewChat) {
-      setChatHistory([]);
+    if (!activeChatId) {
+      // For a new chat, start with a clean history.
+      tempHistory = [];
+    } else {
+      // For an existing chat, use the current history.
+      tempHistory = [...chatHistory];
     }
   
-    tempHistory = [
-      ...(isNewChat ? [] : chatHistory),
+    // Add user message and loading indicator
+    const updatedHistory = [
+      ...tempHistory,
       { isUser: true, text: userMessage },
       { isUser: false, isLoading: true }
     ];
   
-    setChatHistory(tempHistory);
+    setChatHistory(updatedHistory);
     setIsResponding(true);
   
     try {
@@ -127,6 +131,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
       if (activeChatId) {
         const docRef = doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
         setDocumentNonBlocking(docRef, chatEntry, { merge: true });
+        // The useDoc hook will handle updating the view from Firestore
         setIsResponding(false);
 
       } else {
@@ -158,8 +163,8 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] h-full overflow-hidden">
       {/* Chat Column */}
       <div className="flex flex-col h-full">
-        <ScrollArea className="flex-1">
-          <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
+        <ScrollArea className="flex-1 p-4 md:p-6">
+          <div className="max-w-4xl mx-auto space-y-6">
           {chatHistory.length === 0 && !isResponding ? (
               <div className="text-center py-16">
               <Scale className="mx-auto h-12 w-12 text-muted-foreground" />
