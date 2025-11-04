@@ -83,7 +83,7 @@ export default function LawGptPage({ activeChatId: activeChatIdFromProps }: LawG
               <SidebarTrigger />
               <h2 className="text-lg font-semibold">{activeChatId ? 'Chat History' : 'New Chat'}</h2>
             </div>
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-hidden">
               <LawGptClient activeChatId={activeChatId} setActiveChatId={setActiveChatId} />
             </div>
           </main>

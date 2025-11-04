@@ -96,14 +96,11 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     const userMessage = values.articleName;
     form.reset();
   
-    let tempHistory: ChatMessage[];
+    let tempHistory: ChatMessage[] = [];
   
+    // For a new chat, start with a clean history.
     if (!activeChatId) {
-      // For a new chat, start with a clean history.
-      tempHistory = [];
-    } else {
-      // For an existing chat, use the current history.
-      tempHistory = [...chatHistory];
+      setChatHistory([]); 
     }
   
     // Add user message and loading indicator
@@ -130,7 +127,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
       
       if (activeChatId) {
         const docRef = doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
-        setDocumentNonBlocking(docRef, chatEntry, { merge: true });
+        await setDocumentNonBlocking(docRef, chatEntry, { merge: true });
         // The useDoc hook will handle updating the view from Firestore
         setIsResponding(false);
 
