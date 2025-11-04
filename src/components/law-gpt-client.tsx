@@ -151,9 +151,9 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   return (
     <div className="flex-1 grid grid-cols-1 md:grid-cols-3 overflow-hidden">
       {/* Chat Column */}
-      <div className="md:col-span-2 flex flex-col overflow-hidden">
-        <ScrollArea className="flex-1 overflow-y-auto">
-          <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
+      <div className="md:col-span-2 flex flex-col h-full">
+        <ScrollArea className="flex-1 p-4 md:p-6">
+          <div className="max-w-4xl mx-auto space-y-6">
             {chatHistory.length === 0 ? (
                 <div className="text-center py-16">
                 <Scale className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -218,7 +218,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
             )}
           </div>
         </ScrollArea>
-        <div className="border-t bg-background/80">
+        <div className="shrink-0 border-t bg-background/80">
           <div className="max-w-4xl mx-auto p-4">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-4">
