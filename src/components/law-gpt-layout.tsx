@@ -13,10 +13,9 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy } from 'firebase/firestore';
-import { useFirestore, useMemoFirebase } from '@/firebase/provider';
 import Link from 'next/link';
 import { MessageSquare, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,7 +30,6 @@ export default function LawGptPage({ activeChatId: activeChatIdFromProps }: LawG
   const firestore = useFirestore();
   const router = useRouter();
 
-  // The activeChatId is now managed by the page component via props
   const [activeChatId, setActiveChatId] = useState<string | null>(activeChatIdFromProps);
 
   useEffect(() => {
@@ -47,6 +45,7 @@ export default function LawGptPage({ activeChatId: activeChatIdFromProps }: LawG
   const { data: chatHistory, isLoading } = useCollection<{ userMessage: string; id: string }>(chatHistoryQuery);
 
   const handleNewChat = () => {
+    setActiveChatId(null);
     router.push('/law-gpt');
   };
 
@@ -64,7 +63,7 @@ export default function LawGptPage({ activeChatId: activeChatIdFromProps }: LawG
             </SidebarHeader>
             <SidebarContent>
               <SidebarMenu>
-                {isLoading && <div className="p-2">Loading history...</div>}
+                {isLoading && <div className="p-2 text-sidebar-foreground">Loading history...</div>}
                 {chatHistory &&
                   chatHistory.map((chat) => (
                     <SidebarMenuItem key={chat.id}>
@@ -82,9 +81,9 @@ export default function LawGptPage({ activeChatId: activeChatIdFromProps }: LawG
           <main className="flex-1 flex flex-col">
             <div className="flex items-center gap-2 border-b p-2 shrink-0">
               <SidebarTrigger />
-              <h2 className="text-lg font-semibold">LawBot</h2>
+              <h2 className="text-lg font-semibold">{activeChatId ? 'Chat History' : 'New Chat'}</h2>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-hidden">
               <LawGptClient activeChatId={activeChatId} setActiveChatId={setActiveChatId} />
             </div>
           </main>
@@ -93,3 +92,5 @@ export default function LawGptPage({ activeChatId: activeChatIdFromProps }: LawG
     </SidebarProvider>
   );
 }
+
+    

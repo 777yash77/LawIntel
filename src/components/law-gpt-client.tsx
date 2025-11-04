@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser, useFirestore, useDoc, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useDoc, addDocumentNonBlocking, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { Loader2, Scale, Send } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
@@ -44,7 +44,7 @@ type ChatMessage = {
 
 type LawGptClientProps = {
   activeChatId: string | null;
-  setActiveChatId: (id: string) => void;
+  setActiveChatId: (id: string | null) => void;
 };
 
 
@@ -52,6 +52,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   const { user } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [isResponding, setIsResponding] = useState(false);
@@ -63,7 +64,11 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     },
   });
 
-  const chatDocRef = user && activeChatId ? doc(firestore, 'users', user.uid, 'chat_history', activeChatId) : null;
+  const chatDocRef = useMemoFirebase(() => {
+    if (!user || !activeChatId || !firestore) return null;
+    return doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
+  }, [user, activeChatId, firestore]);
+  
   const { data: activeChat } = useDoc(chatDocRef);
 
 
@@ -83,55 +88,67 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
       console.error("User is not authenticated. Cannot send message.");
       return;
     }
-
-    setIsResponding(true);
-    if (!activeChatId) {
-      setChatHistory([]);
-    }
-
-    setChatHistory((prev) => [
-      ...prev,
-      { isUser: true, text: values.articleName },
-      { isUser: false, isLoading: true },
-    ]);
+  
+    const userMessage = values.articleName;
     form.reset();
-
+    setIsResponding(true);
+  
+    // Optimistically update the UI
+    const newChatHistory: ChatMessage[] = [
+      { isUser: true, text: userMessage },
+      { isUser: false, isLoading: true },
+    ];
+  
+    // If it's a new chat, clear the view first
+    if (!activeChatId) {
+      setChatHistory(newChatHistory);
+    } else {
+      // For existing chats, we still show the new interaction immediately
+      setChatHistory(newChatHistory);
+    }
+  
     try {
       const result = await getArticleDefinitionAndHistory({
-        articleName: values.articleName,
+        articleName: userMessage,
       });
-
+  
       const chatEntry = {
         userId: user.uid,
         timestamp: serverTimestamp(),
-        userMessage: values.articleName,
+        userMessage: userMessage,
         geminiResponse: result,
       };
       
-      let newChatId = activeChatId;
-
       if (activeChatId) {
+        // Update existing document
         const docRef = doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
-        setDocumentNonBlocking(docRef, chatEntry, { merge: true });
+        await setDocumentNonBlocking(docRef, chatEntry, { merge: true });
+        // The useDoc hook will handle updating the UI from Firestore data
       } else {
+        // Create new document
         const colRef = collection(firestore, 'users', user.uid, 'chat_history');
         const newDoc = await addDocumentNonBlocking(colRef, chatEntry);
-        if(newDoc) {
-            newChatId = newDoc.id;
-            setActiveChatId(newDoc.id);
-            router.push(`/law-gpt/${newDoc.id}`);
+        if (newDoc) {
+          // Navigate to the new chat URL, which will trigger the layout to re-render
+          // with the correct active chat.
+          router.push(`/law-gpt/${newDoc.id}`);
         }
       }
-
-      setChatHistory((prev) => {
-        const newHistory = [...prev];
-        const lastMessage = newHistory[newHistory.length - 1];
-        if (lastMessage && !lastMessage.isUser && lastMessage.isLoading) {
-          lastMessage.isLoading = false;
-          lastMessage.data = result;
-        }
-        return newHistory;
-      });
+  
+      // Update the final message state now that we have the result
+      // This is handled by the useDoc hook for existing chats, but we need to do it manually for new ones
+       if (!activeChatId) {
+         setChatHistory((prev) => {
+           const newHistory = [...prev];
+           const lastMessage = newHistory[newHistory.length - 1];
+           if (lastMessage && !lastMessage.isUser && lastMessage.isLoading) {
+             lastMessage.isLoading = false;
+             lastMessage.data = result;
+           }
+           return newHistory;
+         });
+       }
+  
     } catch (error) {
       console.error(error);
       setChatHistory((prev) => {
@@ -149,12 +166,11 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   }
 
   return (
-    <div className="flex h-full">
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] h-full">
       {/* Chat Column */}
-      <div className="flex flex-1 flex-col">
-        <div className="flex-1 overflow-y-auto">
-          <ScrollArea className="h-full p-4 md:p-6">
-            <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex flex-col h-full">
+         <ScrollArea className="flex-1" ref={scrollAreaRef}>
+            <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
               {chatHistory.length === 0 ? (
                   <div className="text-center py-16">
                   <Scale className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -187,7 +203,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
                             <span>Thinking...</span>
                         </div>
                       ) : message.data ? (
-                        <div className="space-y-6 prose prose-sm max-w-none">
+                        <div className="space-y-6 prose prose-sm max-w-none text-card-foreground">
                             <div>
                                 <h3 className="font-bold font-headline text-lg mb-2">Definition</h3>
                                 <p>{message.data.definition}</p>
@@ -219,8 +235,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
               )}
             </div>
           </ScrollArea>
-        </div>
-        <div className="shrink-0 border-t bg-background/80">
+        <div className="shrink-0 border-t bg-background">
           <div className="max-w-4xl mx-auto p-4">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-4">
@@ -251,12 +266,12 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
         </div>
       </div>
       {/* Articles Column */}
-      <div className="hidden md:flex w-[320px] flex-col border-l bg-muted/20 p-4">
+      <div className="hidden md:flex w-full flex-col border-l bg-muted/20 p-4">
         <ScrollArea className="flex-1">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold font-headline mb-4">Latest Articles</h3>
             {articles.map((article, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow duration-200">
+              <Card key={index} className="hover:shadow-lg transition-shadow duration-200 bg-card">
                 <CardHeader className="p-4">
                   {article.image && (
                         <div className="mb-2 rounded-t-lg overflow-hidden aspect-video relative">
@@ -282,3 +297,5 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     </div>
   );
 }
+
+    
