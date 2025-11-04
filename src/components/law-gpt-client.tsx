@@ -175,7 +175,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
             ) : chatHistory.length === 0 && !isResponding ? (
                 <div className="text-center py-16">
                 <Scale className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h2 className="mt-4 text-2xl font-semibold font-headline">LawBot</h2>
+                <h2 className="mt-4 text-2xl font-semibold font-headline">lawIntel</h2>
                 <p className="mt-2 text-muted-foreground">
                     Ask about any legal article to get its definition and history.
                 </p>

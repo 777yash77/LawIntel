@@ -7,6 +7,8 @@ import {
   LogOut,
   Bot,
   LogIn,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -18,6 +20,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
 import {
   Popover,
@@ -39,6 +45,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 
 export default function Header() {
@@ -50,6 +57,7 @@ export default function Header() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { setTheme } = useTheme();
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -77,7 +85,7 @@ export default function Header() {
         <div className="container flex h-16 items-center">
           <Link href="/" className="flex items-center gap-2 mr-6">
             <Scale className="h-6 w-6 text-primary" />
-            <span className="font-bold text-lg font-headline">LexiGen</span>
+            <span className="font-bold text-lg font-headline">lawIntel</span>
           </Link>
           <nav className="hidden items-center gap-6 text-sm md:flex">
             <Popover>
@@ -122,6 +130,26 @@ export default function Header() {
             </Link>
           </nav>
           <div className="flex flex-1 items-center justify-end gap-4">
+             <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                  <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                  <span className="sr-only">Toggle theme</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setTheme('light')}>
+                  Light
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTheme('dark')}>
+                  Dark
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTheme('system')}>
+                  System
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             {user && !user.isAnonymous ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -140,7 +168,7 @@ export default function Header() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push('/law-gpt')}>
                     <Bot className="mr-2 h-4 w-4" />
-                    <span>LawBot</span>
+                    <span>lawIntel</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>

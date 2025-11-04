@@ -30,14 +30,14 @@ export default function Home() {
           <div className="container relative z-20 px-4 md:px-6">
             <div className="max-w-3xl mx-auto space-y-4">
               <h1 className="text-4xl font-headline font-bold tracking-tighter sm:text-5xl md:text-6xl">
-                LexiGen: Your AI Legal Companion
+                lawIntel: Your AI Legal Companion
               </h1>
               <p className="text-lg md:text-xl text-gray-200">
                 Instant definitions, historical context, and insights for legal articles. Powered by cutting-edge AI.
               </p>
               <Button asChild size="lg" variant="accent">
                 <Link href="/law-gpt">
-                  Explore LawBot <ArrowRight className="ml-2 h-5 w-5" />
+                  Explore lawIntel <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
             </div>
@@ -82,7 +82,7 @@ export default function Home() {
 
       <footer className="py-6 bg-secondary text-secondary-foreground">
         <div className="container text-center text-sm">
-          &copy; {new Date().getFullYear()} LexiGen. All rights reserved.
+          &copy; {new Date().getFullYear()} lawIntel. All rights reserved.
         </div>
       </footer>
     </div>
