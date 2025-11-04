@@ -89,21 +89,24 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     }
   
     const userMessage = values.articleName;
-  
-    // For new chats, clear history locally first
-    if (!activeChatId) {
-        setChatHistory([]);
-    }
-
     form.reset();
   
-    setIsResponding(true);
+    const isNewChat = !activeChatId;
+    let tempHistory: ChatMessage[] = [];
+  
+    // Start with a clean slate for new chats or use existing history
+    if (!isNewChat) {
+      tempHistory = [...chatHistory];
+    }
+    
     // Append user message and loading state
-    setChatHistory(prev => [
-        ...prev,
-        { isUser: true, text: userMessage },
-        { isUser: false, isLoading: true },
-    ]);
+    tempHistory.push(
+      { isUser: true, text: userMessage },
+      { isUser: false, isLoading: true }
+    );
+  
+    setChatHistory(tempHistory);
+    setIsResponding(true);
   
     try {
       const result = await getArticleDefinitionAndHistory({
@@ -119,13 +122,13 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
       
       if (activeChatId) {
         const docRef = doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
-        // This will trigger the useDoc hook to update the chat
-        await setDocumentNonBlocking(docRef, chatEntry, { merge: true });
+        // Let the useDoc hook handle the update, no local state change needed here
+        setDocumentNonBlocking(docRef, chatEntry, { merge: true });
       } else {
         const colRef = collection(firestore, 'users', user.uid, 'chat_history');
         const newDoc = await addDocumentNonBlocking(colRef, chatEntry);
         if (newDoc) {
-          // Redirect to the new chat URL, which will fetch the correct data
+          // Redirect, which will trigger a full state refresh via useDoc
           router.push(`/law-gpt/${newDoc.id}`);
         }
       }
@@ -142,14 +145,18 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
         return newHistory;
       });
     } finally {
-      setIsResponding(false);
+      // In existing chats, the loading indicator is removed when useDoc gets the new data.
+      // For new chats, it's handled by the redirect.
+      if (activeChatId) {
+        setIsResponding(false);
+      }
     }
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] h-full">
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] h-full overflow-hidden">
       {/* Chat Column */}
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full overflow-hidden">
          <ScrollArea className="flex-1 p-4 md:p-6">
             <div className="max-w-4xl mx-auto space-y-6">
               {chatHistory.length === 0 && !isResponding ? (
@@ -278,5 +285,3 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     </div>
   );
 }
-
-    

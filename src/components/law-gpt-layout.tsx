@@ -78,19 +78,15 @@ export default function LawGptPage({ activeChatId: activeChatIdFromProps }: LawG
               </SidebarMenu>
             </SidebarContent>
           </Sidebar>
-          <main className="flex-1 flex flex-col">
+          <main className="flex-1 flex flex-col overflow-hidden">
             <div className="flex items-center gap-2 border-b p-2 shrink-0">
               <SidebarTrigger />
               <h2 className="text-lg font-semibold">{activeChatId ? 'Chat History' : 'New Chat'}</h2>
             </div>
-            <div className="flex-1 overflow-hidden">
-              <LawGptClient activeChatId={activeChatId} setActiveChatId={setActiveChatId} />
-            </div>
+            <LawGptClient activeChatId={activeChatId} setActiveChatId={setActiveChatId} />
           </main>
         </div>
       </div>
     </SidebarProvider>
   );
 }
-
-    
