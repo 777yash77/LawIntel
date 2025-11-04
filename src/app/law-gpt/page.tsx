@@ -11,13 +11,14 @@ import Link from 'next/link';
 import { MessageSquare, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 
 export default function LawGptPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const params = useParams();
+  const [activeChatId, setActiveChatId] = useState<string | null>(typeof params.chatId === 'string' ? params.chatId : null);
 
   const chatHistoryQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
