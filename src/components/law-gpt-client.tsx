@@ -88,8 +88,9 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) {
-      // Handle case where user is not logged in
-      router.push('/login');
+      // User should be anonymously authenticated by this point via useUser hook.
+      // If not, there's a problem with Firebase setup.
+      console.error("User is not authenticated. Cannot send message.");
       return;
     }
 
@@ -210,7 +211,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
                 </div>
                  {message.isUser && user && (
                   <Avatar>
-                    <AvatarFallback>{user.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback>{user.isAnonymous ? 'A' : user.email?.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                 )}
               </div>
