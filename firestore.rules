@@ -1,124 +1,83 @@
 /**
- * @fileOverview Firestore Security Rules for LexiGen.
+ * @fileoverview Firestore Security Rules for Prototyping.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user-generated content (chat sessions and messages)
- * and public read access for global data (articles and emergency numbers).
+ * This ruleset prioritizes strict authorization and assumes flexible data shapes.
+ * It enforces user-ownership and restricts access to user-specific data.
  *
  * Data Structure:
- * - /articles/{articleId}: Public legal articles.
- * - /emergencyNumbers/{emergencyNumberId}: Public emergency contact numbers.
- * - /users/{userId}: User profiles, where {userId} matches the Firebase auth UID.
- * - /users/{userId}/chatSessions/{chatSessionId}: Chat sessions for each user.
- * - /users/{userId}/chatSessions/{chatSessionId}/messages/{messageId}: Chat messages within a session.
+ * - /articles/{articleId}: Publicly readable articles.
+ * - /users/{userId}: User profiles, accessible only to the owner.
+ * - /users/{userId}/chat_history/{chatHistoryId}: Chat history for each user, accessible only to the owner.
+ * - /emergency_numbers/{emergencyNumberId}: Emergency contact numbers, publicly readable.
  *
  * Key Security Decisions:
- * - User listing is disallowed.
- * - Articles and emergency numbers are publicly readable but not writable by clients.
- * - Chat sessions and messages are strictly owned by the user, enforced through path-based authorization.
+ * - Articles and emergency numbers are publicly readable.
+ * - Chat history and user profiles are strictly user-owned.
+ * - Data validation is minimized to relational integrity checks.
  *
  * Denormalization for Authorization:
- * - The data structure uses path-based authorization to avoid costly `get()` calls. The `userId` is embedded in the path for chat sessions and messages,
- *   allowing rules to directly check `request.auth.uid == userId` without fetching the user document.
+ * - ChatHistory documents include the userId. This denormalization allows security rules to validate user ownership without needing to perform expensive get() operations to verify the relationship between a chat history and its owner.
  *
  * Structural Segregation:
- * - Public data (articles, emergency numbers) is stored in top-level collections, while private user data (chat sessions, messages) is stored under /users/{userId}.
+ * - Articles are stored in a top-level collection /articles assuming they have similar access requirements (e.g., read access for all users). If different articles require different authorization (e.g. only admins can see drafts) then these should be segregated into different collections, for example, /articles_public and /articles_drafts.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Grants public read access to legal articles and restricts write access.
+     * @description Allows read access to all articles. Write access is not granted.
      * @path /articles/{articleId}
-     * @allow get, list: if true
-     * @deny create, update, delete: if false
-     * @principle Allows public read access for articles, but denies all write operations.
+     * @allow (get, list) Any user can read any article.
+     * @deny (create, update, delete) No one can create, update, or delete articles through the client.
+     * @principle Public read access.
      */
     match /articles/{articleId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get, list: if true;
+      allow create, update, delete: if false;
     }
 
     /**
-     * @description Grants public read access to emergency numbers and restricts write access.
-     * @path /emergencyNumbers/{emergencyNumberId}
-     * @allow get, list: if true
-     * @deny create, update, delete: if false
-     * @principle Allows public read access for emergency numbers, but denies all write operations.
-     */
-    match /emergencyNumbers/{emergencyNumberId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages user profiles with owner-only access. Allows creating a user document with a matching UID and enforces ownership for all operations.
+     * @description Manages user profile access. Only the user can read or write their own profile.
      * @path /users/{userId}
-     * @allow create: if isSignedIn() && isOwner(userId)
-     * @allow get: if isOwner(userId)
-     * @allow update: if isExistingOwner(userId)
-     * @allow delete: if isExistingOwner(userId)
-     * @allow list: if false
-     * @deny create: if !isOwner(userId)
-     * @deny update: if !isOwner(userId)
-     * @deny delete: if !isOwner(userId)
-     * @principle Enforces document ownership for writes, restricts access to a user's own data tree, validates relational integrity between documents.
+     * @allow (create) The user can create their profile if the userId matches their auth UID.
+     * @allow (get, update, delete) The user can read, update, or delete their profile if the userId matches their auth UID.
+     * @deny Any other user cannot access this profile.
+     * @principle Enforces document ownership.
      */
     match /users/{userId} {
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-      allow get: if isOwner(userId);
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow get, update, delete: if isOwner(userId);
+      allow create: if isOwner(userId);
       allow list: if false;
     }
 
     /**
-     * @description Manages chat sessions for each user with owner-only access.
-     * @path /users/{userId}/chatSessions/{chatSessionId}
-     * @allow create: if isSignedIn() && isOwner(userId)
-     * @allow get: if isOwner(userId)
-     * @allow update: if isExistingOwner(userId);
-     * @allow delete: if isExistingOwner(userId);
-     * @allow list: if isOwner(userId)
-     * @deny create: if !isOwner(userId)
-     * @deny update: if !isOwner(userId)
-     * @deny delete: if !isOwner(userId)
-     * @principle Enforces document ownership for writes, restricts access to a user's own data tree, validates relational integrity between documents.
+     * @description Manages chat history access. Only the user can read or write their own chat history.
+     * @path /users/{userId}/chat_history/{chatHistoryId}
+     * @allow (create) The user can create chat history entries if the userId matches their auth UID.
+     * @allow (get, list, update, delete) The user can read, list, update, or delete their chat history entries if the userId matches their auth UID.
+     * @deny Any other user cannot access this chat history.
+     * @principle Enforces document ownership within a subcollection.
      */
-    match /users/{userId}/chatSessions/{chatSessionId} {
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+    match /users/{userId}/chat_history/{chatHistoryId} {
       allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
       allow delete: if isExistingOwner(userId);
-      allow list: if isOwner(userId);
     }
 
     /**
-     * @description Manages chat messages within a LawGPT chat session with owner-only access.
-     * @path /users/{userId}/chatSessions/{chatSessionId}/messages/{messageId}
-     * @allow create: if isSignedIn() && isOwner(userId)
-     * @allow get: if isOwner(userId)
-     * @allow update: if isExistingOwner(userId);
-     * @allow delete: if isExistingOwner(userId);
-     * @allow list: if isOwner(userId)
-     * @deny create: if !isOwner(userId)
-     * @deny update: if !isOwner(userId)
-     * @deny delete: if !isOwner(userId)
-     * @principle Enforces document ownership for writes, restricts access to a user's own data tree, validates relational integrity between documents.
+     * @description Allows read access to all emergency numbers. Write access is not granted.
+     * @path /emergency_numbers/{emergencyNumberId}
+     * @allow (get, list) Any user can read any emergency number.
+     * @deny (create, update, delete) No one can create, update, or delete emergency numbers through the client.
+     * @principle Public read access.
      */
-    match /users/{userId}/chatSessions/{chatSessionId}/messages/{messageId} {
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.chatSessionId == chatSessionId;
-      allow get: if isOwner(userId);
-      allow update: if isExistingOwner(userId) && request.resource.data.chatSessionId == resource.data.chatSessionId;
-      allow delete: if isExistingOwner(userId);
-      allow list: if isOwner(userId);
+    match /emergency_numbers/{emergencyNumberId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
     }
 
     // Helper functions
@@ -127,11 +86,11 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+        return isSignedIn() && request.auth.uid == userId && resource != null;
     }
   }
 }
