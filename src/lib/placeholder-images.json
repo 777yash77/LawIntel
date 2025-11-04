@@ -1,3 +1,34 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero",
+      "description": "A modern law library or courthouse interior.",
+      "imageUrl": "https://images.unsplash.com/photo-1701790644702-292e25180524?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxsYXclMjBsaWJyYXJ5fGVufDB8fHx8MTc2MjE4OTYxNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "law library"
+    },
+    {
+      "id": "article1",
+      "description": "Abstract digital lines representing technology.",
+      "imageUrl": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxkaWdpdGFsJTIwdGVjaG5vbG9neXxlbnwwfHx8fDE3NjIyMzQ0Mzh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "digital technology"
+    },
+    {
+      "id": "article2",
+      "description": "A person signing a document.",
+      "imageUrl": "https://images.unsplash.com/photo-1758519288480-1489c17b1519?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8c2lnbmluZyUyMGRvY3VtZW50fGVufDB8fHx8MTc2MjIzNDQzOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "signing document"
+    },
+    {
+      "id": "article3",
+      "description": "A group of diverse people in a meeting.",
+      "imageUrl": "https://images.unsplash.com/photo-1688380692117-63178554d76d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxidXNpbmVzcyUyMG1lZXRpbmd8ZW58MHx8fHwxNzYyMTc5NzcxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "business meeting"
+    },
+    {
+      "id": "article4",
+      "description": "Scales of justice.",
+      "imageUrl": "https://images.unsplash.com/photo-1624638299925-6966fac6914f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxzY2FsZXMlMjBqdXN0aWNlfGVufDB8fHx8MTc2MjIzNDQzOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "scales justice"
+    }
+  ]
 }

@@ -1,0 +1,185 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import {
+  getArticleDefinitionAndHistory,
+  type ArticleDefinitionAndHistoryOutput,
+} from '@/ai/flows/article-definition-and-history';
+
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/hooks/use-auth';
+import { Loader2, Scale, Send } from 'lucide-react';
+import { Separator } from './ui/separator';
+
+const formSchema = z.object({
+  articleName: z.string().min(2, {
+    message: 'Please enter a legal article name.',
+  }),
+});
+
+type ChatMessage = {
+  isUser: boolean;
+  text?: string;
+  isLoading?: boolean;
+  data?: ArticleDefinitionAndHistoryOutput;
+};
+
+export default function LawGptClient() {
+  const { user } = useAuth();
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [isResponding, setIsResponding] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
+    if (viewport) {
+      setTimeout(() => {
+        viewport.scrollTop = viewport.scrollHeight;
+      }, 0);
+    }
+  }, [chatHistory]);
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsResponding(true);
+    setChatHistory((prev) => [
+      ...prev,
+      { isUser: true, text: values.articleName },
+      { isUser: false, isLoading: true },
+    ]);
+    form.reset();
+
+    try {
+      const result = await getArticleDefinitionAndHistory({
+        articleName: values.articleName,
+      });
+      setChatHistory((prev) => {
+        const newHistory = [...prev];
+        const lastMessage = newHistory[newHistory.length - 1];
+        if (lastMessage && !lastMessage.isUser && lastMessage.isLoading) {
+          lastMessage.isLoading = false;
+          lastMessage.data = result;
+        }
+        return newHistory;
+      });
+    } catch (error) {
+      console.error(error);
+      setChatHistory((prev) => {
+        const newHistory = [...prev];
+        const lastMessage = newHistory[newHistory.length - 1];
+        if (lastMessage && !lastMessage.isUser && lastMessage.isLoading) {
+          lastMessage.isLoading = false;
+          lastMessage.text = 'Sorry, I encountered an error. Please try again.';
+        }
+        return newHistory;
+      });
+    } finally {
+      setIsResponding(false);
+    }
+  }
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <ScrollArea className="flex-1 p-4 md:p-6" ref={scrollAreaRef}>
+        <div className="max-w-4xl mx-auto space-y-6">
+          {chatHistory.length === 0 ? (
+             <div className="text-center py-16">
+              <Scale className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h2 className="mt-4 text-2xl font-semibold font-headline">LawBot</h2>
+              <p className="mt-2 text-muted-foreground">
+                Ask about any legal article to get its definition and history.
+              </p>
+             </div>
+          ) : (
+            chatHistory.map((message, index) => (
+              <div
+                key={index}
+                className={`flex items-start gap-4 ${message.isUser ? 'justify-end' : ''}`}
+              >
+                {!message.isUser && (
+                  <Avatar>
+                    <AvatarFallback><Scale /></AvatarFallback>
+                  </Avatar>
+                )}
+                <div
+                  className={`max-w-xl w-full rounded-lg px-4 py-3 shadow-sm ${
+                    message.isUser
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-card border'
+                  }`}
+                >
+                  {message.isLoading ? (
+                    <div className="flex items-center space-x-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Thinking...</span>
+                    </div>
+                  ) : message.data ? (
+                    <div className="space-y-4 prose prose-sm max-w-none">
+                        <div>
+                            <h3 className="font-bold font-headline text-lg mb-2">Definition</h3>
+                            <p>{message.data.definition}</p>
+                        </div>
+                        <Separator />
+                        <div>
+                            <h3 className="font-bold font-headline text-lg mb-2">History</h3>
+                            <p>{message.data.history}</p>
+                        </div>
+                    </div>
+                  ) : (
+                    <p>{message.text}</p>
+                  )}
+                </div>
+                 {message.isUser && user && (
+                  <Avatar>
+                    <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+      <div className="border-t bg-background/80">
+        <div className="max-w-4xl mx-auto p-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-4">
+              <FormField
+                control={form.control}
+                name="articleName"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., 'Article 370 of the Constitution of India'"
+                        {...field}
+                        disabled={isResponding}
+                        autoComplete="off"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={isResponding} size="icon">
+                <Send className="h-4 w-4" />
+                <span className="sr-only">Send</span>
+              </Button>
+            </form>
+          </Form>
+        </div>
+      </div>
+    </div>
+  );
+}
