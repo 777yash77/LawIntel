@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import LawGptClient from '@/components/law-gpt-client';
 import Header from '@/components/header';
 import {
@@ -13,7 +13,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
@@ -37,7 +37,7 @@ export default function LawGptPage({ activeChatId: activeChatIdFromProps }: LawG
   }, [activeChatIdFromProps]);
 
 
-  const chatHistoryQuery = useMemoFirebase(() => {
+  const chatHistoryQuery = useMemo(() => {
     if (!user || !firestore) return null;
     return query(collection(firestore, 'users', user.uid, 'chat_history'), orderBy('timestamp', 'desc'));
   }, [user, firestore]);

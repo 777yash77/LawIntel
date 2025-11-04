@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useUser, useFirestore, useDoc, addDocumentNonBlocking, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { Loader2, Scale, Send } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
@@ -63,7 +63,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     },
   });
 
-  const chatDocRef = useMemoFirebase(() => {
+  const chatDocRef = useMemo(() => {
     if (!user || !activeChatId || !firestore) return null;
     return doc(firestore, 'users', user.uid, 'chat_history', activeChatId);
   }, [user, activeChatId, firestore]);
