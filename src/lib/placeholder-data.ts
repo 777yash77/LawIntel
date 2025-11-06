@@ -31,3 +31,54 @@ export const emergencyNumbers = [
     { service: 'Women Helpline', number: '1091' },
     { service: 'Cyber Crime Helpline', number: '1930' },
 ];
+
+export const lawyers = [
+  {
+    id: 1,
+    name: 'Ananya Sharma',
+    specialty: 'Corporate Law',
+    address: '123 Business Bay, Mumbai, MH',
+    phone: '+91-987-654-3210',
+    email: 'ananya.sharma@example.com',
+  },
+  {
+    id: 2,
+    name: 'Vikram Singh',
+    specialty: 'Criminal Defense',
+    address: '456 Justice Avenue, Delhi, DL',
+    phone: '+91-987-654-3211',
+    email: 'vikram.singh@example.com',
+  },
+  {
+    id: 3,
+    name: 'Priya Patel',
+    specialty: 'Family Law',
+    address: '789 Harmony Street, Ahmedabad, GJ',
+    phone: '+91-987-654-3212',
+    email: 'priya.patel@example.com',
+  },
+  {
+    id: 4,
+    name: 'Rohan Mehta',
+    specialty: 'Intellectual Property',
+    address: '101 Innovation Plaza, Bengaluru, KA',
+    phone: '+91-987-654-3213',
+    email: 'rohan.mehta@example.com',
+  },
+  {
+    id: 5,
+    name: 'Sunita Reddy',
+    specialty: 'Real Estate Law',
+    address: '212 Landview Park, Hyderabad, TS',
+    phone: '+91-987-654-3214',
+    email: 'sunita.reddy@example.com',
+  },
+  {
+    id: 6,
+    name: 'Arjun Gupta',
+    specialty: 'Tax Law',
+    address: '333 Finance Tower, Chennai, TN',
+    phone: '+91-987-654-3215',
+    email: 'arjun.gupta@example.com',
+  },
+];
