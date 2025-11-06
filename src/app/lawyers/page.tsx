@@ -39,8 +39,8 @@ export default function LawyersPage() {
         // In a real app, you would use a reverse geocoding service to get the
         // district from position.coords.latitude and position.coords.longitude.
         // Then, you would query your backend for lawyers in that district.
-        // For this demo, we'll simulate this by filtering for a specific district ("Mumbai").
-        const userDistrict = 'Mumbai';
+        // For this demo, we'll simulate this by filtering for the user's district.
+        const userDistrict = 'Coimbatore';
         
         setTimeout(() => {
           const districtLawyers = lawyers.filter(lawyer => lawyer.address.includes(userDistrict));
