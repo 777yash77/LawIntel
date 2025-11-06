@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { jsPDF } from 'jspdf';
 import {
   getLegalInformation,
   type LegalQuestionOutput,
@@ -57,10 +56,6 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [isResponding, setIsResponding] = useState(false);
-  const [attachedImage, setAttachedImage] = useState<string | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -93,54 +88,6 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     }
   }, [activeChat, activeChatId]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAttachedImage(reader.result as string);
-        setImagePreview(URL.createObjectURL(file));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeAttachedImage = () => {
-    setAttachedImage(null);
-    setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const downloadAsPdf = (data: LegalQuestionOutput) => {
-    const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text(data.topic, 10, 20);
-
-    doc.setFontSize(12);
-    const summaryLines = doc.splitTextToSize(data.summary, 180);
-    doc.text(summaryLines, 10, 30);
-    
-    let yPos = 30 + (summaryLines.length * 7) + 10;
-    
-    if(data.relatedCases && data.relatedCases.length > 0) {
-      doc.setFontSize(14);
-      doc.text("Related Cases / Examples", 10, yPos);
-      yPos += 10;
-
-      doc.setFontSize(12);
-      data.relatedCases.forEach(caseText => {
-        const caseLines = doc.splitTextToSize(`- ${caseText}`, 180);
-        doc.text(caseLines, 10, yPos);
-        yPos += (caseLines.length * 7);
-      });
-    }
-
-    doc.save(`${data.topic.replace(/\s+/g, '_')}.pdf`);
-  };
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) {
       console.error("User is not authenticated. Cannot send message.");
@@ -149,7 +96,6 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
   
     const userMessage = values.question;
     form.reset();
-    removeAttachedImage();
   
     let newChatId = activeChatId;
 
@@ -183,7 +129,6 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     try {
       const result = await getLegalInformation({
         question: userMessage,
-        photoDataUri: attachedImage || undefined,
       });
   
       const chatEntry = {
@@ -201,7 +146,7 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
     } catch (error) {
       console.error(error);
       setChatHistory((prev) => {
-        const newHistory = prev.filter(m => m.isUser);
+        const newHistory = prev.filter(m => !m.isLoading);
         newHistory.push({ isUser: false, text: 'Sorry, I encountered an error. Please try again.' });
         return newHistory;
       });
@@ -264,12 +209,6 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
                                 </ul>
                             </div>
                           )}
-                           <div className="flex justify-end pt-2">
-                              <Button variant="ghost" size="sm" onClick={() => downloadAsPdf(message.data!)}>
-                                <Download className="mr-2 h-4 w-4" />
-                                Download as PDF
-                              </Button>
-                            </div>
                       </div>
                   ) : (
                       <p>{message.text}</p>
@@ -287,32 +226,8 @@ export default function LawGptClient({ activeChatId, setActiveChatId }: LawGptCl
         </ScrollArea>
         <div className="shrink-0 border-t bg-background">
           <div className="max-w-4xl mx-auto p-4 space-y-2">
-            {imagePreview && (
-                <div className="relative w-24 h-24 rounded-md overflow-hidden border">
-                    <Image src={imagePreview} alt="Image preview" layout="fill" objectFit="cover" />
-                    <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-1 right-1 h-6 w-6"
-                        onClick={removeAttachedImage}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
-                </div>
-            )}
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-4">
-                 <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={isResponding}>
-                    <Paperclip className="h-4 w-4" />
-                    <span className="sr-only">Attach image</span>
-                </Button>
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept="image/*"
-                />
                 <FormField
                   control={form.control}
                   name="question"

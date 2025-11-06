@@ -13,9 +13,6 @@ import {z} from 'genkit';
 
 const LegalQuestionInputSchema = z.object({
   question: z.string().describe("The user's question about a legal topic, case, or concept."),
-  photoDataUri: z.string().optional().describe(
-    "An optional photo of a document or subject, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-  ),
 });
 export type LegalQuestionInput = z.infer<typeof LegalQuestionInputSchema>;
 
@@ -40,12 +37,7 @@ const legalQuestionPrompt = ai.definePrompt({
 
 A user has asked the following question: "{{question}}".
 
-{{#if photoDataUri}}
-The user has also provided an image for analysis. Use the contents of this image as primary context for your answer.
-Image: {{media url=photoDataUri}}
-{{/if}}
-
-Perform a deep search on this topic. Based on the user's question and any provided image, identify the core legal topic, provide a clear, comprehensive summary that answers their question, and list relevant examples, precedents, or past cases. Be thorough and detailed in your response.`,
+Perform a deep search on this topic. Based on the user's question, identify the core legal topic, provide a clear, comprehensive summary that answers their question, and list relevant examples, precedents, or past cases. Be thorough and detailed in your response.`,
 });
 
 const legalQuestionFlow = ai.defineFlow(
