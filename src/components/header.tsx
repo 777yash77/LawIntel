@@ -10,7 +10,7 @@ import {
   Moon,
   Sun,
 } from 'lucide-react';
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useAuth, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/popover';
 import { emergencyNumbers } from '@/lib/placeholder-data';
 import { useRouter } from 'next/navigation';
-import { signOut, signInWithEmailAndPassword } from 'firebase/auth';
+import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, UserCredential } from 'firebase/auth';
 import {
   Dialog,
   DialogContent,
@@ -46,11 +46,13 @@ import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { setDoc, doc } from 'firebase/firestore';
 
 
 export default function Header() {
   const { user } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [email, setEmail] = useState('');
@@ -64,12 +66,25 @@ export default function Header() {
     router.push('/');
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUserAuth = async (action: 'login' | 'signup') => {
     setLoading(true);
     setError(null);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      let userCredential: UserCredential;
+      if (action === 'login') {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Create a user profile in Firestore
+        const user = userCredential.user;
+        if (user && firestore) {
+          const userDocRef = doc(firestore, 'users', user.uid);
+          await setDoc(userDocRef, {
+            email: user.email,
+            username: user.email?.split('@')[0], // default username
+          });
+        }
+      }
       setIsLoginDialogOpen(false);
       router.push('/law-gpt');
     } catch (err: any) {
@@ -78,6 +93,7 @@ export default function Header() {
       setLoading(false);
     }
   };
+
 
   return (
     <>
@@ -189,52 +205,64 @@ export default function Header() {
       <Dialog open={isLoginDialogOpen} onOpenChange={setIsLoginDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Login</DialogTitle>
+            <DialogTitle>Login or Sign Up</DialogTitle>
             <DialogDescription>
-              Enter your credentials to access your account.
+              Enter your credentials to sign in or create a new account.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleLogin}>
-            <div className="grid gap-4 py-4">
-              {error && <p className="text-destructive text-sm">{error}</p>}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email" className="text-right">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="password" className="text-right">
-                  Password
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  className="col-span-3"
-                  placeholder="any password will work"
-                />
-              </div>
+          <div className="grid gap-4 py-4">
+            {error && <p className="text-destructive text-sm">{error}</p>}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="email" className="text-right">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="m@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                className="col-span-3"
+              />
             </div>
-            <DialogFooter>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Sign In
-              </Button>
-            </DialogFooter>
-          </form>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="password" className="text-right">
+                Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading}
+              onClick={() => handleUserAuth('login')}
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Login
+            </Button>
+            <Button
+              type="submit"
+              variant="outline"
+              className="w-full"
+              disabled={loading}
+              onClick={() => handleUserAuth('signup')}
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Sign Up
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
