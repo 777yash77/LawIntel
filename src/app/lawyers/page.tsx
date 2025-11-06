@@ -20,11 +20,13 @@ export default function LawyersPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [foundLawyers, setFoundLawyers] = useState<Lawyer[]>([]);
+  const [searched, setSearched] = useState(false);
 
   const handleFindLawyers = () => {
     setIsSearching(true);
     setError(null);
     setFoundLawyers([]);
+    setSearched(true);
 
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser.');
@@ -34,11 +36,15 @@ export default function LawyersPage() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        // In a real app, you would use position.coords.latitude and position.coords.longitude
-        // to query a backend API for nearby lawyers.
-        // For this demo, we'll just show the placeholder data after a short delay.
+        // In a real app, you would use a reverse geocoding service to get the
+        // district from position.coords.latitude and position.coords.longitude.
+        // Then, you would query your backend for lawyers in that district.
+        // For this demo, we'll simulate this by filtering for a specific district ("Mumbai").
+        const userDistrict = 'Mumbai';
+        
         setTimeout(() => {
-          setFoundLawyers(lawyers);
+          const districtLawyers = lawyers.filter(lawyer => lawyer.address.includes(userDistrict));
+          setFoundLawyers(districtLawyers);
           setIsSearching(false);
         }, 1500);
       },
@@ -57,7 +63,7 @@ export default function LawyersPage() {
           <div className="max-w-2xl mx-auto">
             <h1 className="text-4xl font-bold font-headline">Connect with Legal Experts</h1>
             <p className="text-muted-foreground mt-2">
-              Find qualified lawyers near you. Click the button below to allow location access and see a list of legal professionals in your area.
+              Find qualified lawyers in your district. Click the button below to allow location access and see a list of legal professionals in your area.
             </p>
           </div>
 
@@ -67,10 +73,14 @@ export default function LawyersPage() {
             ) : (
               <MapPin className="mr-2 h-5 w-5" />
             )}
-            {isSearching ? 'Searching...' : 'Find Lawyers Near Me'}
+            {isSearching ? 'Searching...' : 'Find Lawyers In My District'}
           </Button>
 
           {error && <p className="text-destructive mt-4">{error}</p>}
+          
+          {searched && !isSearching && foundLawyers.length === 0 && !error && (
+             <p className="text-muted-foreground mt-4">No lawyers found in your district based on our current listings.</p>
+          )}
 
           {foundLawyers.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-left mt-8">
