@@ -26,7 +26,7 @@ type LawGptPageProps = {
 };
 
 export default function LawGptPage({ activeChatId: activeChatIdFromProps }: LawGptPageProps) {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
 
@@ -38,16 +38,41 @@ export default function LawGptPage({ activeChatId: activeChatIdFromProps }: LawG
 
 
   const chatHistoryQuery = useMemo(() => {
-    if (!user || !firestore) return null;
+    // IMPORTANT: Wait for user to be loaded and not be anonymous before querying.
+    if (isUserLoading || !user || user.isAnonymous || !firestore) return null;
     return query(collection(firestore, 'users', user.uid, 'chat_history'), orderBy('timestamp', 'desc'));
-  }, [user, firestore]);
+  }, [user, firestore, isUserLoading]);
 
-  const { data: chatHistory, isLoading } = useCollection<{ userMessage: string; id: string }>(chatHistoryQuery);
+  const { data: chatHistory, isLoading: isHistoryLoading } = useCollection<{ userMessage: string; id: string }>(chatHistoryQuery);
 
   const handleNewChat = () => {
     setActiveChatId(null);
     router.push('/law-gpt');
   };
+  
+  // Don't render the chat interface if the user is not logged in properly.
+  // This can be replaced with a more elegant loading or sign-in prompt.
+  if (isUserLoading) {
+     return (
+      <div className="flex flex-col h-screen bg-background">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+            <p>Loading user...</p>
+        </div>
+      </div>
+     )
+  }
+  
+  if (!user || user.isAnonymous) {
+     return (
+      <div className="flex flex-col h-screen bg-background">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+            <p>Please log in to view your chat history.</p>
+        </div>
+      </div>
+     )
+  }
 
   return (
     <SidebarProvider>
@@ -63,7 +88,7 @@ export default function LawGptPage({ activeChatId: activeChatIdFromProps }: LawG
             </SidebarHeader>
             <SidebarContent>
               <SidebarMenu>
-                {isLoading && <div className="p-2 text-sidebar-foreground">Loading history...</div>}
+                {isHistoryLoading && <div className="p-2 text-sidebar-foreground">Loading history...</div>}
                 {chatHistory &&
                   chatHistory.map((chat) => (
                     <SidebarMenuItem key={chat.id}>
